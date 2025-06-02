@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PKB Loading Instructions</title>
+    <style>
+        body { font-family: monospace; background: #000; color: #0f0; padding: 20px; line-height: 1.6; }
+        .step { background: #001100; border: 1px solid #0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .step h3 { color: #00ff00; margin-top: 0; }
+        .error { background: #330000; border-color: #ff0000; color: #ffaaaa; }
+        .success { background: #003300; border-color: #00ff00; color: #aaffaa; }
+        button { background: #030; color: #0f0; border: 1px solid #0f0; padding: 10px; margin: 5px; cursor: pointer; }
+        .code { background: #222; padding: 5px; border-radius: 3px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>🎯 How to Load PKB Files for 3D Model Extraction</h1>
+    
+    <div class="error">
+        <h3>❌ Current Issue</h3>
+        <p>You're seeing: <span class="code">"PKB file worlds_3g.pkb needs to be loaded first"</span></p>
+        <p>This means the PKB file exists but isn't loaded into browser memory yet.</p>
+    </div>
+    
+    <div class="step">
+        <h3>📁 Step 1: Navigate to Archives Tab</h3>
+        <p>1. In MOMS, click on the <strong>"Archives"</strong> tab in the main navigation</p>
+        <p>2. You should see PKB files listed (worlds_3g.pkb, char_npc.pkb, etc.)</p>
+    </div>
+    
+    <div class="step">
+        <h3>📦 Step 2: Load PKB File into Memory</h3>
+        <p>1. Find the PKB file you want to extract from (e.g., worlds_3g.pkb)</p>
+        <p>2. <strong>Click on the PKB file name</strong> to load it into browser memory</p>
+        <p>3. Wait for it to load completely (may take a few seconds for large files)</p>
+    </div>
+    
+    <div class="step">
+        <h3>🎮 Step 3: Extract 3D Models</h3>
+        <p>1. Go back to the <strong>"3D Models"</strong> tab</p>
+        <p>2. Click <strong>"Extract All Models"</strong> button</p>
+        <p>3. Models should now extract successfully!</p>
+    </div>
+    
+    <div class="success">
+        <h3>✅ Success Indicators</h3>
+        <p>• Console shows: "✅ Auto-loaded index file: packmap_save.lta"</p>
+        <p>• No more "PKB file needs to be loaded first" errors</p>
+        <p>• Models appear in the 3D viewer</p>
+    </div>
+    
+    <div class="step">
+        <h3>🧪 Test PKB Loading</h3>
+        <button onclick="testPKBLoading()">Test PKB File Loading</button>
+        <button onclick="window.open('/', '_blank')">Open MOMS Application</button>
+        <div id="testResults" style="margin-top: 10px;"></div>
+    </div>
+    
+    <div class="step">
+        <h3>🔧 Troubleshooting</h3>
+        <p><strong>If you don't see PKB files in Archives tab:</strong></p>
+        <ul>
+            <li>Load a directory containing .pkb files</li>
+            <li>Check that files are in packmaps/ subdirectory</li>
+            <li>Ensure files are actual Matrix Online PKB archives</li>
+        </ul>
+        
+        <p><strong>If loading fails:</strong></p>
+        <ul>
+            <li>Check browser console for detailed error messages</li>
+            <li>Ensure files are accessible (try this test page)</li>
+            <li>Try loading smaller PKB files first</li>
+        </ul>
+    </div>
+    
+    <script>
+        async function testPKBLoading() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '<p>🔍 Testing PKB file accessibility...</p>';
+            
+            const pkbFiles = ['worlds_3g.pkb', 'char_npc.pkb'];
+            let allGood = true;
+            
+            for (const pkbFile of pkbFiles) {
+                try {
+                    const response = await fetch(`/cache/${pkbFile}`);
+                    if (response.ok) {
+                        const data = await response.arrayBuffer();
+                        results.innerHTML += `<p style="color: #0f0;">✅ ${pkbFile}: ${data.byteLength} bytes - Ready for loading</p>`;
+                    } else {
+                        results.innerHTML += `<p style="color: #f00;">❌ ${pkbFile}: HTTP ${response.status}</p>`;
+                        allGood = false;
+                    }
+                } catch (error) {
+                    results.innerHTML += `<p style="color: #f00;">❌ ${pkbFile}: ${error.message}</p>`;
+                    allGood = false;
+                }
+            }
+            
+            if (allGood) {
+                results.innerHTML += '<p style="color: #0f0; font-weight: bold;">🎉 All PKB files are accessible! You can now load them in MOMS.</p>';
+            } else {
+                results.innerHTML += '<p style="color: #ff0;">⚠️ Some PKB files are not accessible. Check the server logs.</p>';
+            }
+        }
+    </script>
+</body>
+</html>
