@@ -211,11 +211,11 @@
                 parser: 'parseMOA'
             },
             TEXTURE: {
-                extensions: ['.dtx', '.dds', '.tga', '.png', '.jpg', '.jpeg'],
+                extensions: ['.dtx', '.txa', '.txb', '.dds', '.tga', '.png', '.jpg', '.jpeg'],
                 icon: '🖼️',
                 name: 'Texture',
-                description: 'Lithtech DirectX Texture or Image File',
-                parser: 'parseDTX'
+                description: 'Matrix Online Texture or Image File',
+                parser: 'parseTexture'
             },
             LEVEL: {
                 extensions: ['.dat', '.world'],
@@ -399,6 +399,38 @@
         
         // File parsers for Lithtech engine formats
         const LithtechParsers = {
+            // Helper function to read string from buffer
+            readString: (dataView, offset, length) => {
+                let str = '';
+                for (let i = 0; i < length; i++) {
+                    const char = dataView.getUint8(offset + i);
+                    if (char === 0) break; // Null terminator
+                    str += String.fromCharCode(char);
+                }
+                return str;
+            },
+            
+            // Helper to detect file format by magic numbers
+            detectFormat: (buffer) => {
+                const dataView = new DataView(buffer);
+                const magic = dataView.getUint32(0, true);
+                const magic2 = dataView.getUint32(4, true);
+                
+                // Check common MXO magic numbers
+                if (magic === 0x504F5250) return 'PROP'; // 'PROP' in hex
+                if (magic === 0x414F4D) return 'MOA'; // 'MOA' partial
+                if (magic === 0x4D434241) return 'ABCM'; // 'ABCM'
+                
+                // Check string signatures
+                const str = LithtechParsers.readString(dataView, 0, 8);
+                if (str.includes('PROP')) return 'PROP';
+                if (str.includes('MOA')) return 'MOA';
+                if (str.includes('MGA')) return 'MGA';
+                if (str.includes('MGC')) return 'MGC';
+                
+                // Default detection based on patterns
+                return 'UNKNOWN';
+            },
             // ABC Model Parser (simplified)
             parseABC: async (file) => {
                 return new Promise((resolve, reject) => {
@@ -474,7 +506,118 @@
                 });
             },
             
-            // MOA/PROP Model Parser (Matrix Online Assets) - Corrected from MOB misconception
+            // PROP Parser - Static props (successfully exported by community)
+            parsePROP: async (file) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const buffer = e.target.result;
+                            const dataView = new DataView(buffer);
+                            
+                            console.log('Parsing PROP file:', file.name);
+                            
+                            // PROP files are simpler - single mesh
+                            // Based on community: successfully exported to .ply/.fbx
+                            const vertices = [];
+                            const indices = [];
+                            const uvs = [];
+                            const normals = [];
+                            
+                            // Try to find vertex data
+                            // PROP files typically have vertex count early in file
+                            let offset = 0;
+                            let vertexCount = 0;
+                            let faceCount = 0;
+                            
+                            // Scan for reasonable vertex/face counts
+                            for (let i = 8; i < Math.min(256, buffer.byteLength - 8); i += 4) {
+                                const val1 = dataView.getUint32(i, true);
+                                const val2 = dataView.getUint32(i + 4, true);
+                                
+                                if (val1 > 3 && val1 < 65535 && val2 > 1 && val2 < 65535) {
+                                    // Possible vertex/face count pair
+                                    const testSize = i + 8 + (val1 * 12) + (val2 * 12);
+                                    if (testSize < buffer.byteLength) {
+                                        vertexCount = val1;
+                                        faceCount = val2;
+                                        offset = i + 8;
+                                        console.log(`Found potential counts at 0x${i.toString(16)}: verts=${vertexCount}, faces=${faceCount}`);
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            if (vertexCount > 0) {
+                                // Read vertices
+                                for (let i = 0; i < vertexCount && offset + 12 <= buffer.byteLength; i++) {
+                                    const x = dataView.getFloat32(offset, true);
+                                    const y = dataView.getFloat32(offset + 4, true);
+                                    const z = dataView.getFloat32(offset + 8, true);
+                                    
+                                    if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                                        // Apply MXO scale (1 unit = 1cm)
+                                        vertices.push(x * 0.01, y * 0.01, z * 0.01);
+                                    }
+                                    offset += 12;
+                                }
+                                
+                                // Read face indices
+                                for (let i = 0; i < faceCount && offset + 12 <= buffer.byteLength; i++) {
+                                    const a = dataView.getUint32(offset, true);
+                                    const b = dataView.getUint32(offset + 4, true);
+                                    const c = dataView.getUint32(offset + 8, true);
+                                    
+                                    if (a < vertexCount && b < vertexCount && c < vertexCount) {
+                                        indices.push(a, b, c);
+                                    }
+                                    offset += 12;
+                                }
+                                
+                                // Try to read UVs if space remains
+                                if (offset + vertexCount * 8 <= buffer.byteLength) {
+                                    for (let i = 0; i < vertexCount; i++) {
+                                        const u = dataView.getFloat32(offset, true);
+                                        const v = dataView.getFloat32(offset + 4, true);
+                                        if (!isNaN(u) && !isNaN(v)) {
+                                            uvs.push(u, v);
+                                        }
+                                        offset += 8;
+                                    }
+                                }
+                            }
+                            
+                            resolve({
+                                type: 'model',
+                                vertices: vertices,
+                                indices: indices,
+                                uvs: uvs,
+                                normals: normals,
+                                animations: [],
+                                materials: [],
+                                metadata: {
+                                    format: 'PROP',
+                                    description: 'Static prop/object',
+                                    vertexCount: vertices.length / 3,
+                                    faceCount: indices.length / 3,
+                                    hasUVs: uvs.length > 0,
+                                    engine: 'Modified Lithtech Discovery',
+                                    scale: '1 unit = 1cm (converted to meters)',
+                                    exportable: true, // Community successfully exported these
+                                    fileSize: buffer.byteLength
+                                }
+                            });
+                        } catch (error) {
+                            console.error('Error parsing PROP file:', error);
+                            reject(error);
+                        }
+                    };
+                    reader.onerror = reject;
+                    reader.readAsArrayBuffer(file);
+                });
+            },
+            
+            // MOA Model Parser - Complex models (characters, vehicles)
             parseMOA: async (file) => {
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -529,6 +672,8 @@
                                     { name: 'PROP', bytes: [0x50, 0x52, 0x4F, 0x50] }, // PROP files (static objects)
                                     { name: 'IPRF', bytes: [0x49, 0x50, 0x52, 0x46] }, // IPRF specialized data
                                     { name: 'EPRF', bytes: [0x45, 0x50, 0x52, 0x46] }, // EPRF specialized data
+                                    { name: 'MGA', bytes: [0x4D, 0x47, 0x41] },        // MGA model group
+                                    { name: 'MGC', bytes: [0x4D, 0x47, 0x43] },        // MGC model collection
                                     { name: 'LTMP', bytes: [0x4C, 0x54, 0x4D, 0x50] }, // LithTech Model Pack
                                     { name: 'LTB', bytes: [0x4C, 0x54, 0x42] },        // LithTech Binary
                                     { name: 'ABC', bytes: [0x41, 0x42, 0x43] }         // Actor Binary Cache
@@ -584,7 +729,8 @@
                                                 // Validate vertex data
                                                 if (!isNaN(x) && !isNaN(y) && !isNaN(z) && 
                                                     Math.abs(x) < 10000 && Math.abs(y) < 10000 && Math.abs(z) < 10000) {
-                                                    vertices.push(x, y, z);
+                                                    // Apply MXO scale: 1 unit = 1cm, convert to meters for Three.js
+                                                    vertices.push(x * 0.01, y * 0.01, z * 0.01);
                                                 }
                                                 currentOffset += 12;
                                             }
@@ -651,6 +797,76 @@
                             // Try structured parsing first
                             let result = parseStructuredData();
                             
+                            // If structured parsing failed, try MXO-specific patterns
+                            if (!result.success && (file.name.toLowerCase().endsWith('.moa') || file.name.toLowerCase().endsWith('.prop'))) {
+                                console.log('Attempting MXO-specific parsing patterns...');
+                                
+                                // MXO files often have data at specific offsets
+                                // Try common offsets for Lithtech Discovery engine
+                                const tryOffsets = [0x40, 0x80, 0x100, 0x200, 0x400];
+                                
+                                for (const testOffset of tryOffsets) {
+                                    if (testOffset + 8 <= buffer.byteLength) {
+                                        const possibleVertCount = dataView.getUint32(testOffset, true);
+                                        const possibleFaceCount = dataView.getUint32(testOffset + 4, true);
+                                        
+                                        // Check if these are reasonable values
+                                        if (possibleVertCount > 3 && possibleVertCount < 50000 && 
+                                            possibleFaceCount > 1 && possibleFaceCount < 100000) {
+                                            
+                                            console.log(`Found potential counts at offset 0x${testOffset.toString(16)}: verts=${possibleVertCount}, faces=${possibleFaceCount}`);
+                                            
+                                            // Try to parse from this offset
+                                            const vertices = [];
+                                            const faces = [];
+                                            let currentOffset = testOffset + 8;
+                                            
+                                            // Try to read vertices
+                                            for (let i = 0; i < possibleVertCount && currentOffset + 12 <= buffer.byteLength; i++) {
+                                                const x = dataView.getFloat32(currentOffset, true);
+                                                const y = dataView.getFloat32(currentOffset + 4, true);
+                                                const z = dataView.getFloat32(currentOffset + 8, true);
+                                                
+                                                if (!isNaN(x) && !isNaN(y) && !isNaN(z) && 
+                                                    Math.abs(x) < 10000 && Math.abs(y) < 10000 && Math.abs(z) < 10000) {
+                                                    // Apply MXO scale: 1 unit = 1cm, convert to meters for Three.js
+                                                    vertices.push(x * 0.01, y * 0.01, z * 0.01);
+                                                    currentOffset += 12;
+                                                } else {
+                                                    break;
+                                                }
+                                            }
+                                            
+                                            // If we got enough vertices, try reading faces
+                                            if (vertices.length / 3 >= possibleVertCount * 0.8) { // Allow some tolerance
+                                                for (let i = 0; i < possibleFaceCount && currentOffset + 12 <= buffer.byteLength; i++) {
+                                                    const a = dataView.getUint32(currentOffset, true);
+                                                    const b = dataView.getUint32(currentOffset + 4, true);
+                                                    const c = dataView.getUint32(currentOffset + 8, true);
+                                                    
+                                                    if (a < possibleVertCount && b < possibleVertCount && c < possibleVertCount) {
+                                                        faces.push(a, b, c);
+                                                        currentOffset += 12;
+                                                    } else {
+                                                        break;
+                                                    }
+                                                }
+                                                
+                                                if (faces.length / 3 >= possibleFaceCount * 0.5) { // Some tolerance for faces
+                                                    result = {
+                                                        vertices,
+                                                        indices: faces,
+                                                        success: true
+                                                    };
+                                                    console.log(`MXO parsing successful at offset 0x${testOffset.toString(16)}`);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
                             // If structured parsing failed, try pattern-based approach
                             if (!result.success) {
                                 console.log('Attempting pattern-based parsing...');
@@ -668,7 +884,8 @@
                                     if (!isNaN(x) && !isNaN(y) && !isNaN(z) && 
                                         Math.abs(x) < 1000 && Math.abs(y) < 1000 && Math.abs(z) < 1000 &&
                                         (Math.abs(x) > 0.001 || Math.abs(y) > 0.001 || Math.abs(z) > 0.001)) {
-                                        vertices.push(x, y, z);
+                                        // Apply MXO scale: 1 unit = 1cm, convert to meters for Three.js
+                                        vertices.push(x * 0.01, y * 0.01, z * 0.01);
                                         
                                         // Limit vertices to prevent performance issues
                                         if (vertices.length >= 3000) break;
@@ -711,24 +928,30 @@
                                         format: file.name.toLowerCase().endsWith('.moa') ? 'MOA' : 
                                                file.name.toLowerCase().endsWith('.prop') ? 'PROP' : 
                                                file.name.toLowerCase().endsWith('.iprf') ? 'IPRF' : 
-                                               file.name.toLowerCase().endsWith('.eprf') ? 'EPRF' : 'MXO',
+                                               file.name.toLowerCase().endsWith('.eprf') ? 'EPRF' : 
+                                               file.name.toLowerCase().endsWith('.mga') ? 'MGA' : 
+                                               file.name.toLowerCase().endsWith('.mgc') ? 'MGC' : 'MXO',
                                         version: 1.0,
                                         signature: headerInfo.signature,
                                         vertexCount: result.vertices.length / 3,
                                         triangleCount: result.indices.length / 3,
                                         description: file.name.toLowerCase().endsWith('.moa') ? 'Character model/clothing/vehicle' : 
                                                     file.name.toLowerCase().endsWith('.prop') ? 'Static prop/object' : 
+                                                    file.name.toLowerCase().endsWith('.mga') || file.name.toLowerCase().endsWith('.mgc') ? 'Model group/collection' :
+                                                    file.name.toLowerCase().endsWith('.iprf') || file.name.toLowerCase().endsWith('.eprf') ? 'Specialized model data' :
                                                     'Matrix Online model',
                                         parsedBy: 'Enhanced MXO parser v3.0',
                                         fileSize: buffer.byteLength,
                                         hasNormals: !!result.normals,
                                         hasUVs: !!result.uvs,
                                         engine: 'Modified Lithtech Discovery',
-                                        scale: '1 unit = 1 centimeter'
+                                        scale: '1 unit = 1 centimeter (converted to meters)',
+                                        originalScale: 'MXO: 1 unit = 1cm',
+                                        scaleFactor: 0.01
                                     }
                                 });
                             } else {
-                                // Create a fallback simple model
+                                // Create a fallback simple model (already in meters)
                                 const fallbackVertices = [
                                     -1, -1, 0,   // Bottom left
                                      1, -1, 0,   // Bottom right
@@ -759,13 +982,17 @@
                                         format: file.name.toLowerCase().endsWith('.moa') ? 'MOA' : 
                                                file.name.toLowerCase().endsWith('.prop') ? 'PROP' : 
                                                file.name.toLowerCase().endsWith('.iprf') ? 'IPRF' : 
-                                               file.name.toLowerCase().endsWith('.eprf') ? 'EPRF' : 'MXO',
+                                               file.name.toLowerCase().endsWith('.eprf') ? 'EPRF' : 
+                                               file.name.toLowerCase().endsWith('.mga') ? 'MGA' : 
+                                               file.name.toLowerCase().endsWith('.mgc') ? 'MGC' : 'MXO',
                                         version: 1.0,
                                         signature: headerInfo.signature,
                                         vertexCount: 5,
                                         triangleCount: 4,
                                         description: file.name.toLowerCase().endsWith('.moa') ? 'Character model (placeholder)' : 
                                                     file.name.toLowerCase().endsWith('.prop') ? 'Static prop (placeholder)' : 
+                                                    file.name.toLowerCase().endsWith('.mga') || file.name.toLowerCase().endsWith('.mgc') ? 'Model group (placeholder)' :
+                                                    file.name.toLowerCase().endsWith('.iprf') || file.name.toLowerCase().endsWith('.eprf') ? 'Specialized model (placeholder)' :
                                                     'Matrix Online model (placeholder)',
                                         parsedBy: 'Enhanced MXO parser v3.0 (fallback)',
                                         fileSize: buffer.byteLength,
@@ -1140,6 +1367,96 @@
                     } catch (error) {
                         console.error('Error parsing video file:', error);
                         reject(error);
+                    }
+                });
+            },
+            
+            // Texture Parser - Handles .txa, .txb, .dtx, .dds and standard formats
+            parseTexture: async (file) => {
+                return new Promise((resolve, reject) => {
+                    const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+                    
+                    // For TXA/TXB files, we need server-side conversion to DDS
+                    if (fileExt === '.txa' || fileExt === '.txb') {
+                        console.log('TXA/TXB texture detected - needs conversion to DDS');
+                        
+                        // Create a placeholder with info about conversion requirement
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 256;
+                        canvas.height = 256;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Matrix-style placeholder
+                        ctx.fillStyle = '#001a00';
+                        ctx.fillRect(0, 0, 256, 256);
+                        
+                        // Add grid pattern
+                        ctx.strokeStyle = '#003300';
+                        for (let i = 0; i < 256; i += 32) {
+                            ctx.beginPath();
+                            ctx.moveTo(i, 0);
+                            ctx.lineTo(i, 256);
+                            ctx.moveTo(0, i);
+                            ctx.lineTo(256, i);
+                            ctx.stroke();
+                        }
+                        
+                        ctx.strokeStyle = '#00ff00';
+                        ctx.strokeRect(0, 0, 256, 256);
+                        ctx.font = '14px monospace';
+                        ctx.fillStyle = '#00ff00';
+                        ctx.fillText('TXA/TXB Texture', 10, 128);
+                        ctx.font = '12px monospace';
+                        ctx.fillText('Requires txa2dds', 10, 148);
+                        ctx.fillText('conversion', 10, 162);
+                        
+                        resolve({
+                            type: 'texture',
+                            canvas: canvas,
+                            width: 256,
+                            height: 256,
+                            format: fileExt.toUpperCase(),
+                            metadata: {
+                                format: 'Matrix Online Texture',
+                                compression: 'DXT (after conversion)',
+                                converter: 'txa2dds.exe required',
+                                description: 'Proprietary MXO texture format',
+                                needsConversion: true
+                            }
+                        });
+                    } else if (fileExt === '.dds') {
+                        // For DDS files, we'd need DDSLoader
+                        // For now, show placeholder with DDS info
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 256;
+                        canvas.height = 256;
+                        const ctx = canvas.getContext('2d');
+                        
+                        ctx.fillStyle = '#001a00';
+                        ctx.fillRect(0, 0, 256, 256);
+                        ctx.strokeStyle = '#00ff00';
+                        ctx.strokeRect(0, 0, 256, 256);
+                        ctx.font = '14px monospace';
+                        ctx.fillStyle = '#00ff00';
+                        ctx.fillText('DDS Texture', 10, 128);
+                        ctx.fillText('(DXT Compressed)', 10, 148);
+                        
+                        resolve({
+                            type: 'texture',
+                            canvas: canvas,
+                            width: 256,
+                            height: 256,
+                            format: 'DDS',
+                            metadata: {
+                                format: 'DirectDraw Surface',
+                                compression: 'DXT1/DXT5',
+                                mipLevels: 'Multiple',
+                                description: 'Converted from TXA/TXB'
+                            }
+                        });
+                    } else {
+                        // Standard image formats - delegate to DTX parser
+                        LithtechParsers.parseDTX(file).then(resolve).catch(reject);
                     }
                 });
             },
@@ -2010,13 +2327,20 @@
                         bbox.getCenter(center);
                         geometry.translate(-center.x, -center.y, -center.z);
                         
-                        // Scale to fit within reasonable bounds
+                        // Scale to fit within reasonable bounds (keeping MXO scale in mind)
                         const size = new THREE.Vector3();
                         bbox.getSize(size);
                         const maxDim = Math.max(size.x, size.y, size.z);
-                        if (maxDim > 10) {
-                            const scale = 5 / maxDim;
+                        
+                        // MXO models are already scaled (1cm = 0.01m), so only scale if extremely large
+                        if (maxDim > 50) { // 50 meters is extremely large for a game model
+                            const scale = 10 / maxDim;
                             geometry.scale(scale, scale, scale);
+                            console.log(`Model scaled down by factor of ${scale} (was ${maxDim}m)`);
+                        } else if (maxDim < 0.1) { // Less than 10cm is too small
+                            const scale = 1 / maxDim;
+                            geometry.scale(scale, scale, scale);
+                            console.log(`Model scaled up by factor of ${scale} (was ${maxDim}m)`);
                         }
                     }
                     
@@ -2059,15 +2383,74 @@
                     
                     // Create mesh
                     const mesh = new THREE.Mesh(geometry, material);
-                    scene.add(mesh);
-                    modelRef.current = mesh;
+                    
+                    // Check if we have LOD levels
+                    if (data.lodLevels && data.lodLevels.length > 1) {
+                        // Create LOD object
+                        const lod = new THREE.LOD();
+                        
+                        data.lodLevels.forEach((level, index) => {
+                            const lodGeometry = new THREE.BufferGeometry();
+                            
+                            // Apply vertex reduction if this is a simplified LOD
+                            let lodVertices = level.vertices;
+                            let lodIndices = level.indices;
+                            
+                            if (level.simplified && level.reduction) {
+                                // Simple vertex reduction (in real implementation, use proper decimation)
+                                const step = Math.floor(1 / level.reduction);
+                                lodVertices = [];
+                                lodIndices = [];
+                                
+                                for (let i = 0; i < level.vertices.length; i += step * 3) {
+                                    if (i + 2 < level.vertices.length) {
+                                        lodVertices.push(level.vertices[i], level.vertices[i+1], level.vertices[i+2]);
+                                    }
+                                }
+                                
+                                // Regenerate indices
+                                const numVerts = lodVertices.length / 3;
+                                for (let i = 0; i < numVerts - 2; i += 3) {
+                                    if (i + 2 < numVerts) {
+                                        lodIndices.push(i, i + 1, i + 2);
+                                    }
+                                }
+                            }
+                            
+                            lodGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(lodVertices), 3));
+                            if (lodIndices.length > 0) {
+                                lodGeometry.setIndex(lodIndices);
+                            }
+                            lodGeometry.computeVertexNormals();
+                            
+                            const lodMaterial = material.clone();
+                            if (index > 0) {
+                                // Make lower LODs slightly different color for debugging
+                                lodMaterial.color.multiplyScalar(0.8);
+                            }
+                            
+                            const lodMesh = new THREE.Mesh(lodGeometry, lodMaterial);
+                            lod.addLevel(lodMesh, level.distance);
+                        });
+                        
+                        scene.add(lod);
+                        modelRef.current = lod;
+                        
+                        // Update camera for LOD testing
+                        lod.update(camera);
+                    } else {
+                        // No LOD, add single mesh
+                        scene.add(mesh);
+                        modelRef.current = mesh;
+                    }
                     
                     // Calculate statistics
                     setModelStats({
                         vertices: data.vertices.length / 3,
                         faces: data.indices ? data.indices.length / 3 : data.vertices.length / 9,
                         bones: data.bones ? data.bones.length : 0,
-                        animations: data.animations ? data.animations.length : 0
+                        animations: data.animations ? data.animations.length : 0,
+                        lodLevels: data.lodLevels ? data.lodLevels.length : 1
                     });
                     
                     // Add animations if available
@@ -2239,6 +2622,11 @@
                     // Update controls
                     if (controlsRef.current) {
                         controlsRef.current.update();
+                    }
+                    
+                    // Update LOD if we have a LOD object
+                    if (modelRef.current && modelRef.current.isLOD) {
+                        modelRef.current.update(camera);
                     }
                     
                     // Apply camera movement from global keyboard state
@@ -2727,6 +3115,12 @@
                                         Model Group/Collection files organize multiple models together.
                                         These files reference other model assets and are used for complex objects
                                         that consist of multiple parts.
+                                    </>
+                                ) : file.name.toLowerCase().endsWith('.iprf') || file.name.toLowerCase().endsWith('.eprf') ? (
+                                    <>
+                                        Specialized model data files used in Matrix Online.
+                                        IPRF (Internal Performance) and EPRF (External Performance) files contain
+                                        optimized model data for specific game systems.
                                     </>
                                 ) : (
                                     <>
@@ -5199,9 +5593,39 @@
             return (
                 <div className="p-4" style={{ height: 'calc(100vh - 100px)', overflowY: 'auto' }}>
                     <h3 className="matrix-title mb-4">GameObject & Combat Analyzer - Enhanced for Matrix Online</h3>
-                    <p className="text-xs mb-4 opacity-70">
-                        Analyzes combat logs, XML configs, JSON data, and various MXO-specific file formats
+                    <p className="text-xs mb-2 opacity-70">
+                        Analyzes combat logs, XML configs, JSON data, .gob files, and various MXO-specific file formats
                     </p>
+                    
+                    {/* Critical Information Alert */}
+                    <div className="bg-red-900 bg-opacity-20 border border-red-500 p-3 rounded mb-3">
+                        <h4 className="text-sm font-bold mb-1 text-red-400">🔑 Critical: 44,000 GameObjects (.gob files)</h4>
+                        <p className="text-xs mb-1">
+                            <strong>Key to MXO:</strong> ~44k GameObject files define everything in the world.
+                        </p>
+                        <p className="text-xs mb-1">
+                            <strong>The Challenge:</strong> Decode the hex structure - understand what each byte represents.
+                        </p>
+                        <p className="text-xs">
+                            <strong>Expert Advice:</strong> "You have to flail at it until you understand it." - Morpheus
+                        </p>
+                    </div>
+                    
+                    {/* PKB Archive Information */}
+                    <div className="bg-yellow-900 bg-opacity-20 border border-yellow-500 p-3 rounded mb-4">
+                        <h4 className="text-sm font-bold mb-1 text-yellow-400">📦 Models Packed in PKB Archives</h4>
+                        <p className="text-xs mb-1">
+                            Most .moa/.prop files are in .pkb archives (packmaps/ directory)
+                        </p>
+                        <ul className="list-disc list-inside text-xs space-y-0.5 ml-3">
+                            <li><strong>char_npc.pkb</strong> - NPC models</li>
+                            <li><strong>zmisc_1.pkb</strong> - Misc assets</li>
+                            <li><strong>packmap_save.lta</strong> - File index</li>
+                        </ul>
+                        <p className="text-xs mt-1 text-gray-400">
+                            Use the Archive Browser to extract from PKB files.
+                        </p>
+                    </div>
                     
                     {/* File Summary */}
                     <div className="mb-4 p-4 border border-green-500 rounded">
@@ -5218,8 +5642,10 @@
                                 <p className="text-xs mt-2">Load a directory containing:</p>
                                 <ul className="text-xs mt-2">
                                     <li>• Log files (.log, .txt, .out)</li>
+                                    <li>• GameObject files (.gob)</li>
                                     <li>• Combat configs (.xml, .json, .cfg)</li>
                                     <li>• Data files (.dat, .csv)</li>
+                                    <li>• PKB archives from packmaps/</li>
                                     <li>• Files with combat keywords in name</li>
                                 </ul>
                             </div>
@@ -5663,6 +6089,13 @@
             const [fileData, setFileData] = useState(null);
             const [isLoading, setIsLoading] = useState(false);
             const [activeView, setActiveView] = useState('explorer');
+            const [modelFilter, setModelFilter] = useState('all');
+            
+            // Make filter accessible globally for the filter buttons
+            useEffect(() => {
+                window.modelFilter = modelFilter;
+                window.setModelFilter = setModelFilter;
+            }, [modelFilter]);
             
             // Handle directory selection
             const handleDirectorySelect = (e) => {
@@ -5750,8 +6183,12 @@
                             console.log(`Processing 3D model: ${fileName}`);
                             
                             // Use specific parser based on file extension
-                            if (fileExt === '.moa' || fileExt === '.prop' || fileExt === '.iprf' || fileExt === '.eprf') {
+                            if (fileExt === '.prop') {
+                                parsedData = await LithtechParsers.parsePROP(fileInfo.file);
+                            } else if (fileExt === '.moa' || fileExt === '.iprf' || fileExt === '.eprf') {
                                 parsedData = await LithtechParsers.parseMOA(fileInfo.file);
+                            } else if (fileExt === '.mga' || fileExt === '.mgc') {
+                                parsedData = await LithtechParsers.parseMGA(fileInfo.file);
                             } else {
                                 parsedData = await LithtechParsers.parseABC(fileInfo.file);
                             }
@@ -5782,7 +6219,7 @@
                         try {
                             // For texture files
                             console.log(`Processing texture: ${fileName}`);
-                            parsedData = await LithtechParsers.parseDTX(fileInfo.file);
+                            parsedData = await LithtechParsers.parseTexture(fileInfo.file);
                         } catch (error) {
                             console.error('Error parsing texture:', error);
                             // Create a placeholder texture
@@ -6114,34 +6551,159 @@
                     ) : activeView === 'models' ? (
                         <div className="p-4" style={{ height: 'calc(100vh - 100px)', overflowY: 'auto' }}>
                             <h3 className="matrix-title mb-4">3D Models Browser</h3>
+                            
+                            {/* PKB Archive Alert */}
+                            <div className="bg-yellow-900 bg-opacity-20 border border-yellow-500 p-3 rounded mb-4">
+                                <h4 className="text-sm font-bold mb-1 text-yellow-400">📦 Models are in PKB Archives!</h4>
+                                <p className="text-xs mb-2">
+                                    Most .moa and .prop files are packed inside .pkb archives in the <strong>packmaps/</strong> directory.
+                                </p>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <strong>Key archives:</strong>
+                                        <ul className="list-disc list-inside ml-2">
+                                            <li>char_npc.pkb - NPCs</li>
+                                            <li>zmisc_1.pkb - Props</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <strong>Index files:</strong>
+                                        <ul className="list-disc list-inside ml-2">
+                                            <li>packmap_save.lta</li>
+                                            <li>rezmap.lta/ltb</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <p className="text-xs mt-2 text-gray-300">
+                                    👉 Go to <strong>Archive Browser</strong> tab to extract models from PKB files.
+                                </p>
+                            </div>
+                            
+                            {/* Model Statistics */}
+                            <div className="mb-4 p-3 border border-green-500 bg-black bg-opacity-50">
+                                <div className="grid grid-cols-3 gap-4 text-sm">
+                                    <div>
+                                        <span className="text-green-400">Visible Models:</span> {Object.entries(allFiles).filter(([path, fileInfo]) => {
+                                            const ext = '.' + path.split('.').pop().toLowerCase();
+                                            return FILE_TYPES.MODEL.extensions.includes(ext);
+                                        }).length}
+                                    </div>
+                                    <div>
+                                        <span className="text-green-400">MOA Files:</span> {Object.entries(allFiles).filter(([path]) => path.toLowerCase().endsWith('.moa')).length}
+                                    </div>
+                                    <div>
+                                        <span className="text-green-400">PROP Files:</span> {Object.entries(allFiles).filter(([path]) => path.toLowerCase().endsWith('.prop')).length}
+                                    </div>
+                                </div>
+                                <div className="mt-2 text-xs opacity-70">
+                                    <div>Expected paths: resource/GameObjects/vehicles/, resource/GameObjects/characters/</div>
+                                    <div>Scale: 1 unit = 1 cm (MXO uses Lithtech Discovery engine)</div>
+                                </div>
+                            </div>
+                            
+                            {/* Category Filter */}
+                            <div className="mb-4">
+                                <div className="flex gap-2 flex-wrap">
+                                    <button className="px-3 py-1 border border-green-500 hover:bg-green-900 hover:bg-opacity-20" 
+                                            onClick={() => setModelFilter('all')}>
+                                        All Models
+                                    </button>
+                                    <button className="px-3 py-1 border border-green-500 hover:bg-green-900 hover:bg-opacity-20" 
+                                            onClick={() => setModelFilter('vehicles')}>
+                                        Vehicles
+                                    </button>
+                                    <button className="px-3 py-1 border border-green-500 hover:bg-green-900 hover:bg-opacity-20" 
+                                            onClick={() => setModelFilter('characters')}>
+                                        Characters
+                                    </button>
+                                    <button className="px-3 py-1 border border-green-500 hover:bg-green-900 hover:bg-opacity-20" 
+                                            onClick={() => setModelFilter('props')}>
+                                        Props
+                                    </button>
+                                </div>
+                            </div>
+                            
                             <div className="grid grid-cols-3 gap-4">
                                 {Object.entries(allFiles).filter(([path, fileInfo]) => {
                                     const ext = '.' + path.split('.').pop().toLowerCase();
-                                    return FILE_TYPES.MODEL.extensions.includes(ext);
-                                }).map(([path, fileInfo], index) => (
-                                    <div 
-                                        key={index} 
-                                        className="border border-green-500 p-2 cursor-pointer hover:bg-green-900 hover:bg-opacity-20"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleFileSelect(path, fileInfo);
-                                            setActiveView('explorer'); // Switch to explorer view to show the editor
-                                        }}
-                                    >
-                                        <div className="bg-black bg-opacity-50 aspect-square flex items-center justify-center">
-                                            <span className="text-4xl">📊</span>
+                                    if (!FILE_TYPES.MODEL.extensions.includes(ext)) return false;
+                                    
+                                    // Apply category filter if set
+                                    if (window.modelFilter && window.modelFilter !== 'all') {
+                                        if (window.modelFilter === 'vehicles' && !path.includes('vehicles')) return false;
+                                        if (window.modelFilter === 'characters' && !path.includes('characters')) return false;
+                                        if (window.modelFilter === 'props' && ext !== '.prop') return false;
+                                    }
+                                    
+                                    return true;
+                                }).map(([path, fileInfo], index) => {
+                                    const fileName = path.split('/').pop();
+                                    const ext = '.' + fileName.split('.').pop().toLowerCase();
+                                    const isCharacterPart = path.includes('characters') || fileName.includes('body') || fileName.includes('head') || fileName.includes('hand');
+                                    
+                                    return (
+                                        <div 
+                                            key={index} 
+                                            className="border border-green-500 p-2 cursor-pointer hover:bg-green-900 hover:bg-opacity-20"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleFileSelect(path, fileInfo);
+                                                setActiveView('explorer'); // Switch to explorer view to show the editor
+                                            }}
+                                        >
+                                            <div className="bg-black bg-opacity-50 aspect-square flex items-center justify-center relative">
+                                                <span className="text-4xl">
+                                                    {ext === '.moa' ? '🧍' : ext === '.prop' ? '📦' : ext === '.mga' || ext === '.mgc' ? '🎭' : '📊'}
+                                                </span>
+                                                {isCharacterPart && (
+                                                    <span className="absolute top-1 right-1 text-xs bg-green-700 px-1 rounded">CHAR</span>
+                                                )}
+                                            </div>
+                                            <div className="p-2">
+                                                <div className="text-center truncate" title={fileName}>
+                                                    {fileName}
+                                                </div>
+                                                <div className="text-xs opacity-70 truncate" title={path}>
+                                                    {path.replace(/^.*\/resource\//, 'resource/')}
+                                                </div>
+                                                <div className="text-xs opacity-50">
+                                                    {Math.floor(fileInfo.file.size / 1024)} KB
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="p-2 text-center truncate" title={path.split('/').pop()}>
-                                            {path.split('/').pop()}
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                                 {Object.entries(allFiles).filter(([path, fileInfo]) => {
                                     const ext = '.' + path.split('.').pop().toLowerCase();
                                     return FILE_TYPES.MODEL.extensions.includes(ext);
                                 }).length === 0 && (
                                     <div className="col-span-3 text-center p-8">
-                                        <p>No 3D model files found. Load a directory containing .abc or .mob files.</p>
+                                        <div className="mb-4">
+                                            <p className="text-lg mb-2">No unpacked 3D model files found</p>
+                                            <p className="text-sm opacity-70">Models are packed in PKB archives!</p>
+                                        </div>
+                                        <div className="text-left max-w-2xl mx-auto p-4 border border-green-500 bg-black bg-opacity-50">
+                                            <p className="font-bold mb-2 text-yellow-400">📦 To access Matrix Online models:</p>
+                                            <ol className="list-decimal list-inside text-sm space-y-2 mb-3">
+                                                <li>Navigate to your MXO <strong>packmaps/</strong> directory</li>
+                                                <li>Load <strong>.pkb</strong> archive files</li>
+                                                <li>Use the <strong>Archive Browser</strong> tab to extract models</li>
+                                            </ol>
+                                            <p className="font-bold mb-2">Model file types in archives:</p>
+                                            <ul className="list-disc list-inside text-sm space-y-1">
+                                                <li><span className="text-green-400">.moa</span> - Character models, clothing, vehicles</li>
+                                                <li><span className="text-green-400">.prop</span> - Static props and objects</li>
+                                                <li><span className="text-green-400">.abc</span> - Actor Binary Cache files</li>
+                                                <li><span className="text-green-400">.iprf/.eprf</span> - Specialized model data</li>
+                                                <li><span className="text-green-400">.mga/.mgc</span> - Model group/collection files</li>
+                                            </ul>
+                                            <p className="mt-3 text-sm">Example paths inside PKB archives:</p>
+                                            <ul className="list-disc list-inside text-xs space-y-1 opacity-70">
+                                                <li>resource/GameObjects/vehicles/taxi/taxi_white.moa</li>
+                                                <li>resource/characters-NPC/Zombie/zombie-f.moa</li>
+                                                <li>resource/GameObjects/props/projector_placeholder.prop</li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 )}
                             </div>
