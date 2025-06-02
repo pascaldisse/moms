@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js"></script>
+    <!-- Note: For production, precompile JSX components and remove Babel standalone -->
     <!-- Three.js - Use latest version with ES modules support -->
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
     <script type="importmap">
@@ -35,72 +36,157 @@
         // Dispatch event when THREE is ready
         window.dispatchEvent(new Event('threejs-ready'));
         
-        console.log('THREE.js modules loaded successfully');
-        console.log('THREE available:', !!window.THREE);
-        console.log('THREE.OrbitControls available:', !!window.THREE.OrbitControls);
+        // THREE.js modules loaded successfully
     </script>
     <script>
         // Wait for THREE.js to be ready
         window.addEventListener('threejs-ready', () => {
-            console.log('Event: THREE.js ready');
-            console.log('THREE available:', !!window.THREE);
-            console.log('THREE.OrbitControls available:', !!window.THREE?.OrbitControls);
+            // THREE.js ready - initialization complete
         });
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Removed Tailwind CDN for production - using custom CSS instead -->
     
     <!-- Monaco Editor -->
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs/loader.js"></script>
     
     <style>
-        /* Custom styles */
-        .matrix-theme {
+        /* Matrix-themed CSS replacing Tailwind for production */
+        :root {
             --matrix-green: #00ff00;
             --matrix-dark: #001a00;
             --matrix-black: #000800;
             --matrix-light: #ccffcc;
+            --matrix-gray: #003300;
         }
         
+        /* Reset and base styles */
+        * { box-sizing: border-box; }
         body {
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             font-family: 'Courier New', monospace;
-            background-color: var(--matrix-black, #000800);
-            color: var(--matrix-green, #00ff00);
+            background-color: var(--matrix-black);
+            color: var(--matrix-green);
+            line-height: 1.4;
         }
         
-        .matrix-button {
-            background-color: var(--matrix-dark, #001a00);
-            color: var(--matrix-green, #00ff00);
-            border: 1px solid var(--matrix-green, #00ff00);
-            padding: 8px 16px;
+        /* Layout utilities */
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .flex-1 { flex: 1; }
+        .w-full { width: 100%; }
+        .h-full { height: 100%; }
+        .h-screen { height: 100vh; }
+        .overflow-auto { overflow: auto; }
+        .overflow-hidden { overflow: hidden; }
+        .relative { position: relative; }
+        .absolute { position: absolute; }
+        .fixed { position: fixed; }
+        .top-0 { top: 0; }
+        .left-0 { left: 0; }
+        .right-0 { right: 0; }
+        .bottom-0 { bottom: 0; }
+        .z-10 { z-index: 10; }
+        .z-50 { z-index: 50; }
+        
+        /* Spacing */
+        .p-1 { padding: 0.25rem; }
+        .p-2 { padding: 0.5rem; }
+        .p-3 { padding: 0.75rem; }
+        .p-4 { padding: 1rem; }
+        .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+        .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+        .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+        .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+        .m-1 { margin: 0.25rem; }
+        .m-2 { margin: 0.5rem; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mr-2 { margin-right: 0.5rem; }
+        .mt-2 { margin-top: 0.5rem; }
+        
+        /* Text utilities */
+        .text-xs { font-size: 0.75rem; }
+        .text-sm { font-size: 0.875rem; }
+        .text-lg { font-size: 1.125rem; }
+        .text-xl { font-size: 1.25rem; }
+        .font-bold { font-weight: bold; }
+        .text-center { text-align: center; }
+        .text-green-400 { color: var(--matrix-green); }
+        .text-red-400 { color: #ff4444; }
+        .text-yellow-400 { color: #ffff44; }
+        
+        /* Background utilities */
+        .bg-black { background-color: var(--matrix-black); }
+        .bg-gray-800 { background-color: var(--matrix-dark); }
+        .bg-gray-700 { background-color: var(--matrix-gray); }
+        .bg-green-900 { background-color: var(--matrix-dark); }
+        
+        /* Border utilities */
+        .border { border: 1px solid var(--matrix-green); }
+        .border-green-500 { border-color: var(--matrix-green); }
+        .border-r { border-right: 1px solid var(--matrix-green); }
+        .border-l { border-left: 1px solid var(--matrix-green); }
+        .border-t { border-top: 1px solid var(--matrix-green); }
+        .border-b { border-bottom: 1px solid var(--matrix-green); }
+        .rounded { border-radius: 0.25rem; }
+        .rounded-md { border-radius: 0.375rem; }
+        
+        /* Component styles */
+        .matrix-button, button {
+            background-color: var(--matrix-dark);
+            color: var(--matrix-green);
+            border: 1px solid var(--matrix-green);
+            padding: 0.5rem 1rem;
             cursor: pointer;
             transition: all 0.3s;
+            font-family: inherit;
+            border-radius: 0.25rem;
         }
         
-        .matrix-button:hover {
-            background-color: var(--matrix-green, #00ff00);
-            color: var(--matrix-black, #000800);
+        .matrix-button:hover, button:hover {
+            background-color: var(--matrix-green);
+            color: var(--matrix-black);
         }
         
+        .matrix-button:disabled, button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        input, select, textarea {
+            background-color: var(--matrix-dark);
+            color: var(--matrix-green);
+            border: 1px solid var(--matrix-green);
+            padding: 0.5rem;
+            font-family: inherit;
+            border-radius: 0.25rem;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--matrix-light);
+            box-shadow: 0 0 5px var(--matrix-green);
+        }
+        
+        /* Specific component styles */
         .file-tree {
             height: calc(100vh - 60px);
             overflow-y: auto;
-            background-color: var(--matrix-dark, #001a00);
-            border-right: 1px solid var(--matrix-green, #00ff00);
+            background-color: var(--matrix-dark);
+            border-right: 1px solid var(--matrix-green);
         }
         
         .editor-container {
             height: calc(100vh - 60px);
             overflow: hidden;
-            background-color: var(--matrix-black, #000800);
+            background-color: var(--matrix-black);
         }
         
         .preview-container {
             height: calc(100vh - 60px);
             overflow: hidden;
-            background-color: var(--matrix-dark, #001a00);
-            border-left: 1px solid var(--matrix-green, #00ff00);
+            background-color: var(--matrix-dark);
+            border-left: 1px solid var(--matrix-green);
         }
         
         .file-tree-item {
@@ -435,7 +521,7 @@
                 }
                 
                 monitor?.end();
-                console.log('Model loaded successfully:', parsedData);
+                // console.log('Model loaded successfully:', parsedData);
                 return parsedData;
                 
             } catch (error) {
@@ -530,7 +616,7 @@
                             const buffer = e.target.result;
                             const dataView = new DataView(buffer);
                             
-                            console.log(`Parsing MXO model group/collection file: ${file.name} (${buffer.byteLength} bytes)`);
+                            // console.log(`Parsing MXO model group/collection file: ${file.name} (${buffer.byteLength} bytes)`);
                             
                             // Model groups are collections of references to other models
                             // Return placeholder data for now
@@ -565,7 +651,7 @@
                             const buffer = e.target.result;
                             const dataView = new DataView(buffer);
                             
-                            console.log('Parsing PROP file:', file.name);
+                            // console.log('Parsing PROP file:', file.name);
                             
                             // PROP files are simpler - single mesh
                             // Based on community: successfully exported to .ply/.fbx
@@ -592,7 +678,7 @@
                                         vertexCount = val1;
                                         faceCount = val2;
                                         offset = i + 8;
-                                        console.log(`Found potential counts at 0x${i.toString(16)}: verts=${vertexCount}, faces=${faceCount}`);
+                                        // console.log(`Found potential counts at 0x${i.toString(16)}: verts=${vertexCount}, faces=${faceCount}`);
                                         break;
                                     }
                                 }
@@ -676,7 +762,7 @@
                             const buffer = e.target.result;
                             const dataView = new DataView(buffer);
                             
-                            console.log(`Parsing MXO model file: ${file.name} (${buffer.byteLength} bytes)`);
+                            // console.log(`Parsing MXO model file: ${file.name} (${buffer.byteLength} bytes)`);
                             
                             // Generate a thumbnail for the model
                             const createThumbnail = () => {
@@ -714,7 +800,7 @@
                             const analyzeHeader = () => {
                                 const header = new Uint8Array(buffer, 0, Math.min(256, buffer.byteLength));
                                 const headerBytes = Array.from(header.slice(0, 32)).map(b => b.toString(16).padStart(2, '0')).join(' ');
-                                console.log('MXO model file header bytes:', headerBytes);
+                                // console.log('MXO model file header bytes:', headerBytes);
                                 
                                 // Check for common Lithtech signatures
                                 const signatures = [
@@ -738,7 +824,7 @@
                                         }
                                     }
                                     if (match) {
-                                        console.log(`Found ${sig.name} signature at start of file`);
+                                        // console.log(`Found ${sig.name} signature at start of file`);
                                         return { signature: sig.name, headerSize: 16 };
                                     }
                                 }
@@ -761,7 +847,7 @@
                                         const numFaces = dataView.getUint32(currentOffset + 4, true);
                                         currentOffset += 8;
                                         
-                                        console.log(`Header parsing: vertices=${numVertices}, faces=${numFaces}`);
+                                        // console.log(`Header parsing: vertices=${numVertices}, faces=${numFaces}`);
                                         
                                         // Validate counts are reasonable
                                         if (numVertices > 0 && numVertices < 100000 && numFaces > 0 && numFaces < 200000) {
@@ -826,7 +912,7 @@
                                                 }
                                             }
                                             
-                                            console.log(`Structured parsing successful: ${vertices.length/3} vertices, ${faces.length/3} faces`);
+                                            // console.log(`Structured parsing successful: ${vertices.length/3} vertices, ${faces.length/3} faces`);
                                             
                                             return {
                                                 vertices,
@@ -838,7 +924,7 @@
                                         }
                                     }
                                 } catch (error) {
-                                    console.log('Structured parsing failed:', error.message);
+                                    // console.log('Structured parsing failed:', error.message);
                                 }
                                 
                                 return { success: false };
@@ -849,7 +935,7 @@
                             
                             // If structured parsing failed, try MXO-specific patterns
                             if (!result.success && (file.name.toLowerCase().endsWith('.moa') || file.name.toLowerCase().endsWith('.prop'))) {
-                                console.log('Attempting MXO-specific parsing patterns...');
+                                // console.log('Attempting MXO-specific parsing patterns...');
                                 
                                 // MXO files often have data at specific offsets
                                 // Try common offsets for Lithtech Discovery engine
@@ -864,7 +950,7 @@
                                         if (possibleVertCount > 3 && possibleVertCount < 50000 && 
                                             possibleFaceCount > 1 && possibleFaceCount < 100000) {
                                             
-                                            console.log(`Found potential counts at offset 0x${testOffset.toString(16)}: verts=${possibleVertCount}, faces=${possibleFaceCount}`);
+                                            // console.log(`Found potential counts at offset 0x${testOffset.toString(16)}: verts=${possibleVertCount}, faces=${possibleFaceCount}`);
                                             
                                             // Try to parse from this offset
                                             const vertices = [];
@@ -908,7 +994,7 @@
                                                         indices: faces,
                                                         success: true
                                                     };
-                                                    console.log(`MXO parsing successful at offset 0x${testOffset.toString(16)}`);
+                                                    // console.log(`MXO parsing successful at offset 0x${testOffset.toString(16)}`);
                                                     break;
                                                 }
                                             }
@@ -919,7 +1005,7 @@
                             
                             // If structured parsing failed, try pattern-based approach
                             if (!result.success) {
-                                console.log('Attempting pattern-based parsing...');
+                                // console.log('Attempting pattern-based parsing...');
                                 
                                 const vertices = [];
                                 const indices = [];
@@ -960,7 +1046,7 @@
                                     success: vertices.length > 0
                                 };
                                 
-                                console.log(`Pattern-based parsing: ${vertices.length/3} vertices found`);
+                                // console.log(`Pattern-based parsing: ${vertices.length/3} vertices found`);
                             }
                             
                             // Create final result
@@ -1017,7 +1103,7 @@
                                     3, 4, 2   // Back top triangle
                                 ];
                                 
-                                console.log('Using fallback model for MOB file');
+                                // console.log('Using fallback model for MOB file');
                                 
                                 resolve({
                                     type: 'model',
@@ -1085,7 +1171,7 @@
                                 if (response.ok) {
                                     const data = await response.json();
                                     videoUrl = data.url;
-                                    console.log('BIK proxy URL:', videoUrl);
+                                    // console.log('BIK proxy URL:', videoUrl);
                                 } else {
                                     console.error('BIK proxy server error:', response.status);
                                     // Fallback to blob URL (won't play but won't crash)
@@ -1428,7 +1514,7 @@
                     
                     // For TXA/TXB files, we need server-side conversion to DDS
                     if (fileExt === '.txa' || fileExt === '.txb') {
-                        console.log('TXA/TXB texture detected - needs conversion to DDS');
+                        // console.log('TXA/TXB texture detected - needs conversion to DDS');
                         
                         // Create a placeholder with info about conversion requirement
                         const canvas = document.createElement('canvas');
@@ -1526,7 +1612,7 @@
                                 .map(byte => String.fromCharCode(byte))
                                 .join('');
                             
-                            console.log(`DTX header: ${headerStr} [${Array.from(header).map(b => b.toString(16).padStart(2, '0')).join(' ')}]`);
+                            // console.log(`DTX header: ${headerStr} [${Array.from(header).map(b => b.toString(16).padStart(2, '0')).join(' ')}]`);
                             
                             // DTX files might not have a consistent header
                             // We'll try to detect common image formats and render those too
@@ -1821,7 +1907,7 @@
                                 format = 'PKB';
                                 const view = new DataView(buffer);
                                 
-                                console.log(`Processing PKB: ${file.name} (${buffer.byteLength} bytes)`);
+                                // console.log(`Processing PKB: ${file.name} (${buffer.byteLength} bytes)`);
                                 
                                 // Store PKB data globally for extraction
                                 if (!window.MXO_PKB_FILES) {
@@ -1880,7 +1966,7 @@
                                     data: infoData
                                 }];
                                 
-                                console.log('PKB file loaded and stored for extraction');
+                                // console.log('PKB file loaded and stored for extraction');
                             }
                             
                             resolve({
@@ -2128,7 +2214,7 @@
                 // Wait for THREE.js to be ready
                 const initThreeJS = () => {
                     if (!window.THREE) {
-                        console.log('Waiting for THREE.js to load...');
+                        // console.log('Waiting for THREE.js to load...');
                         setTimeout(initThreeJS, 100);
                         return;
                     }
@@ -2143,7 +2229,7 @@
                 // Set initial camera position
                 camera.position.set(0, 0, 5);
                 camera.lookAt(0, 0, 0);
-                console.log('Camera created with position:', camera.position);
+                // Debug position removed
                 
                 // Store camera reference globally for access by other components
                 window.sceneCamera = camera;
@@ -2170,7 +2256,7 @@
                 });
                 
                 renderer.domElement.addEventListener('webglcontextrestored', () => {
-                    console.log('WebGL context restored');
+                    // console.log('WebGL context restored');
                 });
                 
                 containerRef.current.appendChild(renderer.domElement);
@@ -2182,7 +2268,7 @@
                 // Add controls
                 // Make sure THREE.OrbitControls is available
                 if (window.THREE && window.THREE.OrbitControls) {
-                    console.log('Initializing OrbitControls');
+                    // console.log('Initializing OrbitControls');
                     const controls = new window.THREE.OrbitControls(camera, renderer.domElement);
                     controls.enableDamping = true;
                     controls.dampingFactor = 0.25;
@@ -2197,7 +2283,7 @@
                     }
                     
                     // Debug camera and controls
-                    console.log('Camera initial position:', camera.position);
+                    // Debug position removed
                     console.log('OrbitControls settings after modification:', {
                         enableDamping: controls.enableDamping,
                         dampingFactor: controls.dampingFactor,
@@ -2222,19 +2308,19 @@
                     // Add keyboard event listeners
                     onKeyDown = (event) => {
                         const key = event.key.toLowerCase();
-                        console.log('KeyDown Event:', key);
+                        // console.log('KeyDown Event:', key);
                         if (['w', 'a', 'd', 'r'].includes(key)) {
                             keyStates[key] = true;
-                            console.log('KeyStates after keydown:', JSON.stringify(keyStates));
+                            // console.log('KeyStates after keydown:', JSON.stringify(keyStates));
                         }
                     };
                     
                     onKeyUp = (event) => {
                         const key = event.key.toLowerCase();
-                        console.log('KeyUp Event:', key);
+                        // console.log('KeyUp Event:', key);
                         if (['w', 'a', 'd', 'r'].includes(key)) {
                             keyStates[key] = false;
-                            console.log('KeyStates after keyup:', JSON.stringify(keyStates));
+                            // console.log('KeyStates after keyup:', JSON.stringify(keyStates));
                         }
                     };
                     
@@ -2246,19 +2332,19 @@
                     };
                     
                     onMouseDown = (event) => {
-                        console.log('MouseDown Event:', event.button, event.clientX, event.clientY);
+                        // console.log('MouseDown Event:', event.button, event.clientX, event.clientY);
                         if (event.button === 0) { // Left mouse button
                             mouseState.isRotating = true;
                             mouseState.prevX = event.clientX;
                             mouseState.prevY = event.clientY;
-                            console.log('Mouse rotation started:', mouseState);
+                            // console.log('Mouse rotation started:', mouseState);
                         }
                     };
                     
                     onMouseUp = (event) => {
-                        console.log('MouseUp Event');
+                        // console.log('MouseUp Event');
                         mouseState.isRotating = false;
-                        console.log('Mouse rotation stopped:', mouseState);
+                        // console.log('Mouse rotation stopped:', mouseState);
                     };
                     
                     onMouseMove = (event) => {
@@ -2266,7 +2352,7 @@
                             const deltaX = event.clientX - mouseState.prevX;
                             const deltaY = event.clientY - mouseState.prevY;
                             
-                            console.log('MouseMove with rotation:', deltaX, deltaY);
+                            // console.log('MouseMove with rotation:', deltaX, deltaY);
                             
                             // Rotate camera based on mouse movement
                             camera.rotation.y -= deltaX * 0.01;
@@ -2278,7 +2364,7 @@
                     };
                     
                     // Add event listeners
-                    console.log('Adding event listeners for WASD and mouse rotation');
+                    // console.log('Adding event listeners for WASD and mouse rotation');
                     document.addEventListener('keydown', onKeyDown);
                     document.addEventListener('keyup', onKeyUp);
                     renderer.domElement.addEventListener('mousedown', onMouseDown);
@@ -2295,7 +2381,7 @@
                     
                     // Store reference to key states for animation loop
                     controls.keyStates = keyStates;
-                    console.log('Stored keyStates on controls:', controls.keyStates);
+                    // console.log('Stored keyStates on controls:', controls.keyStates);
                 } else {
                     console.warn("THREE.OrbitControls is not available. Using manual mouse controls.");
                     
@@ -2430,11 +2516,11 @@
                         if (maxDim > 50) { // 50 meters is extremely large for a game model
                             const scale = 10 / maxDim;
                             geometry.scale(scale, scale, scale);
-                            console.log(`Model scaled down by factor of ${scale} (was ${maxDim}m)`);
+                            // console.log(`Model scaled down by factor of ${scale} (was ${maxDim}m)`);
                         } else if (maxDim < 0.1) { // Less than 10cm is too small
                             const scale = 1 / maxDim;
                             geometry.scale(scale, scale, scale);
-                            console.log(`Model scaled up by factor of ${scale} (was ${maxDim}m)`);
+                            // console.log(`Model scaled up by factor of ${scale} (was ${maxDim}m)`);
                         }
                     }
                     
@@ -2683,7 +2769,7 @@
                     const key = e.key.toLowerCase();
                     if (['w', 'a', 'd', 'r'].includes(key)) {
                         window.keyboardState[key] = true;
-                        console.log('Key pressed:', key, window.keyboardState);
+                        // console.log('Key pressed:', key, window.keyboardState);
                     }
                 };
                 
@@ -2691,7 +2777,7 @@
                     const key = e.key.toLowerCase();
                     if (['w', 'a', 'd', 'r'].includes(key)) {
                         window.keyboardState[key] = false;
-                        console.log('Key released:', key, window.keyboardState);
+                        // console.log('Key released:', key, window.keyboardState);
                     }
                 };
                 
@@ -2711,7 +2797,7 @@
                 window.myKeyDownHandler = handleKeyDown;
                 window.myKeyUpHandler = handleKeyUp;
                 
-                console.log("Global keyboard controls initialized");
+                // console.log("Global keyboard controls initialized");
                 
                 // Animation loop
                 const animate = () => {
@@ -2817,7 +2903,7 @@
                 
                 // Cleanup on unmount
                 return () => {
-                    console.log('Component unmounting, cleaning up listeners');
+                    // console.log('Component unmounting, cleaning up listeners');
                     window.removeEventListener('resize', handleResize);
                     
                     // Remove global keyboard handlers
@@ -2835,7 +2921,7 @@
                         if (window.THREE && window.THREE.OrbitControls) {
                             // Remove local event listeners added for OrbitControls
                             if (typeof onKeyDown !== 'undefined') {
-                                console.log('Removing OrbitControls keyboard and mouse event listeners');
+                                // console.log('Removing OrbitControls keyboard and mouse event listeners');
                                 document.removeEventListener('keydown', onKeyDown);
                                 document.removeEventListener('keyup', onKeyUp);
                                 if (renderer && renderer.domElement) {
@@ -2912,7 +2998,7 @@
                     // This is simplified for the demo
                     if (animationPlaying) {
                         // Placeholder for animation switching
-                        console.log(`Switched to animation ${index}`);
+                        // console.log(`Switched to animation ${index}`);
                     }
                 }
             };
@@ -2977,7 +3063,7 @@
                                 className="webgl-container"
                                 style={{ height: '100%' }}
                                 onMouseEnter={() => {
-                                    console.log('Mouse entered 3D view - setting up global keyboard controls');
+                                    // console.log('Mouse entered 3D view - setting up global keyboard controls');
                                     // Initialize global WASD controls when mouse enters the 3D view
                                     window.keyboardState = window.keyboardState || {
                                         w: false,
@@ -2991,7 +3077,7 @@
                                         const key = e.key.toLowerCase();
                                         if (['w', 'a', 's', 'd'].includes(key)) {
                                             window.keyboardState[key] = true;
-                                            console.log('Key pressed in viewer:', key);
+                                            // console.log('Key pressed in viewer:', key);
                                         }
                                     };
                                     
@@ -2999,7 +3085,7 @@
                                         const key = e.key.toLowerCase();
                                         if (['w', 'a', 's', 'd'].includes(key)) {
                                             window.keyboardState[key] = false;
-                                            console.log('Key released in viewer:', key);
+                                            // console.log('Key released in viewer:', key);
                                         }
                                     };
                                     
@@ -4143,13 +4229,13 @@
                     if (videoSrc) {
                         video.src = videoSrc;
                         video.load();
-                        console.log('Loading video:', videoSrc);
+                        // console.log('Loading video:', videoSrc);
                     }
                 }
                 
                 // Get video metadata when loaded
                 video.onloadedmetadata = () => {
-                    console.log('Video metadata loaded:', video.videoWidth, 'x', video.videoHeight);
+                    // console.log('Video metadata loaded:', video.videoWidth, 'x', video.videoHeight);
                     setDuration(video.duration);
                     setVideoMetadata({
                         duration: video.duration,
@@ -6212,7 +6298,7 @@
                         const duration = endTime - startTime;
                         const memoryUsed = endMemory - startMemory;
                         
-                        console.log(`Performance [${operation}]: ${duration.toFixed(2)}ms, Memory: ${(memoryUsed / 1024 / 1024).toFixed(2)}MB`);
+                        // console.log(`Performance [${operation}]: ${duration.toFixed(2)}ms, Memory: ${(memoryUsed / 1024 / 1024).toFixed(2)}MB`);
                         
                         if (duration > 5000) {
                             console.warn(`Slow operation detected: ${operation} took ${duration.toFixed(2)}ms`);
@@ -6224,14 +6310,40 @@
             }
         };
 
+        // Auto-load index file function
+        window.loadIndexFile = async () => {
+            if (window.MXO_PKB_INDEX_DATA) {
+                return true; // Already loaded
+            }
+            
+            try {
+                // Try to load the test index file
+                const response = await fetch('/cache/packmap_save.lta');
+                if (response.ok) {
+                    const arrayBuffer = await response.arrayBuffer();
+                    window.MXO_PKB_INDEX_DATA = new Uint8Array(arrayBuffer);
+                    window.MXO_PKB_INDEX_NAME = 'packmap_save.lta';
+                    // console.log(`Auto-loaded index file: packmap_save.lta (${window.MXO_PKB_INDEX_DATA.length} bytes)`);
+                    return true;
+                }
+            } catch (error) {
+                console.warn('Could not auto-load index file:', error);
+            }
+            return false;
+        };
+
         // Helper function to extract files from PKB using index
         window.extractFromPKB = async (pkbFileName) => {
             const perf = window.performanceMonitor.start(`PKB Extraction: ${pkbFileName}`);
             
+            // Try to auto-load index file if not already loaded
             if (!window.MXO_PKB_INDEX_DATA) {
-                console.error('No index file loaded. Please load packmap_save.lta first.');
-                perf.end();
-                return [];
+                const loaded = await window.loadIndexFile();
+                if (!loaded) {
+                    console.error('No index file loaded. Please load packmap_save.lta first.');
+                    perf.end();
+                    return [];
+                }
             }
             
             const pkbData = window.MXO_PKB_FILES && window.MXO_PKB_FILES[pkbFileName.toLowerCase()];
@@ -6240,7 +6352,7 @@
                 return [];
             }
             
-            console.log(`Attempting to extract from ${pkbFileName} using index`);
+            // console.log(`Attempting to extract from ${pkbFileName} using index`);
             
             // Parse the packmap_save.lta index
             // The format appears to be binary with file entries
@@ -6300,7 +6412,7 @@
                                         data: fileData
                                     });
                                     
-                                    console.log(`Found file: ${filename} at offset ${fileOffset}, size ${fileSize}`);
+                                    // console.log(`Found file: ${filename} at offset ${fileOffset}, size ${fileSize}`);
                                 }
                             }
                         }
@@ -6309,7 +6421,7 @@
                 
                 // If no files found with the above method, try a different approach
                 if (extractedFiles.length === 0) {
-                    console.log('No files found with first method, trying alternative parsing...');
+                    // console.log('No files found with first method, trying alternative parsing...');
                     
                     // Add some dummy files for testing
                     // In reality, we need the proper packmap_save.lta format specification
@@ -6327,7 +6439,7 @@
                 console.error('Error parsing index:', error);
             }
             
-            console.log(`Extracted ${extractedFiles.length} files from ${pkbFileName}`);
+            // console.log(`Extracted ${extractedFiles.length} files from ${pkbFileName}`);
             perf.end();
             return extractedFiles;
         };
@@ -6364,7 +6476,7 @@ User Agent: ${navigator.userAgent}`;
                 navigator.clipboard.writeText(errorDetails).then(() => {
                     alert('Error details copied to clipboard. You can report this on GitHub.');
                 }).catch(() => {
-                    console.log('Error details:', errorDetails);
+                    // console.log('Error details:', errorDetails);
                     alert('Error details logged to console. Please copy and report on GitHub.');
                 });
             }
@@ -6470,7 +6582,7 @@ User Agent: ${navigator.userAgent}`;
                     if (FILE_TYPES.MODEL.extensions.includes(fileExt)) {
                         try {
                             // For 3D models, parse and prepare for display
-                            console.log(`Processing 3D model: ${fileName}`);
+                            // console.log(`Processing 3D model: ${fileName}`);
                             
                             // Use specific parser based on file extension
                             if (fileExt === '.prop') {
@@ -6508,7 +6620,7 @@ User Agent: ${navigator.userAgent}`;
                     } else if (FILE_TYPES.TEXTURE.extensions.includes(fileExt)) {
                         try {
                             // For texture files
-                            console.log(`Processing texture: ${fileName}`);
+                            // console.log(`Processing texture: ${fileName}`);
                             parsedData = await LithtechParsers.parseTexture(fileInfo.file);
                         } catch (error) {
                             console.error('Error parsing texture:', error);
@@ -6540,11 +6652,11 @@ User Agent: ${navigator.userAgent}`;
                     } else if (FILE_TYPES.LEVEL.extensions.includes(fileExt)) {
                         parsedData = await LithtechParsers.parseDAT(fileInfo.file);
                     } else if (FILE_TYPES.ARCHIVE.extensions.includes(fileExt)) {
-                        console.log(`Processing archive: ${fileName}`);
+                        // console.log(`Processing archive: ${fileName}`);
                         
                         // Check if this is an index file
                         if (fileName === 'packmap_save.lta' || fileName === 'rezmap.lta' || fileName === 'rezmap.ltb') {
-                            console.log(`Loading PKB index file: ${fileName}`);
+                            // console.log(`Loading PKB index file: ${fileName}`);
                             // Parse as index file
                             parsedData = await LithtechParsers.parseArchive(fileInfo.file);
                             
@@ -6553,7 +6665,7 @@ User Agent: ${navigator.userAgent}`;
                             reader.onload = (e) => {
                                 window.MXO_PKB_INDEX_DATA = new Uint8Array(e.target.result);
                                 window.MXO_PKB_INDEX_NAME = fileName;
-                                console.log(`Stored PKB index data from ${fileName} (${window.MXO_PKB_INDEX_DATA.length} bytes)`);
+                                // console.log(`Stored PKB index data from ${fileName} (${window.MXO_PKB_INDEX_DATA.length} bytes)`);
                             };
                             reader.readAsArrayBuffer(fileInfo.file);
                         } else {
@@ -6564,7 +6676,7 @@ User Agent: ${navigator.userAgent}`;
                     } else if (FILE_TYPES.ASSEMBLY.extensions.includes(fileExt)) {
                         // For DLL and EXE files
                         try {
-                            console.log(`Processing assembly: ${fileName}`);
+                            // console.log(`Processing assembly: ${fileName}`);
                             parsedData = await LithtechParsers.parseAssembly(fileInfo.file);
                         } catch (error) {
                             console.warn('Error parsing assembly file:', error);
@@ -6579,11 +6691,11 @@ User Agent: ${navigator.userAgent}`;
                         }
                     } else if (FILE_TYPES.CUTSCENE.extensions.includes(fileExt)) {
                         // For video files, prepare for playback
-                        console.log(`Processing video: ${fileName}`);
+                        // console.log(`Processing video: ${fileName}`);
                         try {
                             // Use the parseCutscene function which handles BIK files
                             parsedData = await LithtechParsers.parseCutscene(fileInfo.file);
-                            console.log(`Video processed: ${parsedData.width}x${parsedData.height}, ${parsedData.duration}s`);
+                            // console.log(`Video processed: ${parsedData.width}x${parsedData.height}, ${parsedData.duration}s`);
                         } catch (error) {
                             console.error('Error processing video:', error);
                             // Fallback if video metadata can't be read
@@ -6600,7 +6712,7 @@ User Agent: ${navigator.userAgent}`;
                         }
                     } else if (FILE_TYPES.SCRIPT.extensions.includes(fileExt)) {
                         // For scripts, just read as text
-                        console.log(`Processing script: ${fileName}`);
+                        // console.log(`Processing script: ${fileName}`);
                         const text = await new Promise((resolve, reject) => {
                             const reader = new FileReader();
                             reader.onload = e => resolve(e.target.result);
@@ -6617,7 +6729,7 @@ User Agent: ${navigator.userAgent}`;
                         };
                     } else if (FILE_TYPES.SOUND.extensions.includes(fileExt)) {
                         // For audio, create a URL for playback
-                        console.log(`Processing audio: ${fileName}`);
+                        // console.log(`Processing audio: ${fileName}`);
                         const url = URL.createObjectURL(fileInfo.file);
                         parsedData = { 
                             type: 'audio', 
@@ -6908,7 +7020,7 @@ User Agent: ${navigator.userAgent}`;
                                                 
                                                 for (const [path, fileInfo] of pkbFiles) {
                                                     const fileName = path.split('/').pop();
-                                                    console.log(`Extracting from ${fileName}...`);
+                                                    // console.log(`Extracting from ${fileName}...`);
                                                     
                                                     // Use the new extraction function
                                                     const extractedFiles = await window.extractFromPKB(fileName);
@@ -6937,7 +7049,7 @@ User Agent: ${navigator.userAgent}`;
                                                         });
                                                         
                                                         totalExtracted += modelFiles.length;
-                                                        console.log(`Extracted ${modelFiles.length} model files from ${fileName}`);
+                                                        // console.log(`Extracted ${modelFiles.length} model files from ${fileName}`);
                                                     }
                                                 }
                                                 
@@ -7461,7 +7573,7 @@ User Agent: ${navigator.userAgent}`;
             // Wait for THREE.js to be ready
             const waitForThree = () => {
                 if (window.THREE && window.THREE.OrbitControls) {
-                    console.log('THREE.js is ready, initializing app');
+                    // console.log('THREE.js is ready, initializing app');
                     
                     // Simulate loading time (2 seconds)
                     setTimeout(() => {
@@ -7478,7 +7590,7 @@ User Agent: ${navigator.userAgent}`;
                         clearInterval(matrixInterval);
                     }, 2000);
                 } else {
-                    console.log('Waiting for THREE.js...');
+                    // console.log('Waiting for THREE.js...');
                     setTimeout(waitForThree, 100);
                 }
             };
