@@ -5310,12 +5310,279 @@
             );
         };
         
+        // .gob File Analysis Functions
+        const analyzeGobFileStructure = (buffer) => {
+            const dataView = new DataView(buffer);
+            const analysis = {
+                fileSize: buffer.byteLength,
+                header: {},
+                structures: [],
+                strings: [],
+                patterns: [],
+                possibleFields: {}
+            };
+            
+            // Read first 64 bytes as header
+            analysis.header.hexDump = Array.from(new Uint8Array(buffer, 0, Math.min(64, buffer.byteLength)))
+                .map(b => b.toString(16).padStart(2, '0')).join(' ');
+            
+            // Look for magic numbers or signatures
+            const headerBytes = new Uint8Array(buffer, 0, Math.min(16, buffer.byteLength));
+            analysis.header.magicNumber = Array.from(headerBytes.slice(0, 4))
+                .map(b => b.toString(16).padStart(2, '0')).join('');
+            
+            // Try to identify version/type fields
+            if (buffer.byteLength >= 8) {
+                analysis.header.possibleVersion = dataView.getUint32(4, true); // little endian
+                analysis.header.possibleSize = dataView.getUint32(8, true);
+            }
+            
+            // Scan for string patterns (null-terminated ASCII)
+            let offset = 0;
+            while (offset < buffer.byteLength - 1) {
+                let str = '';
+                let strStart = offset;
+                
+                // Read potential string
+                while (offset < buffer.byteLength) {
+                    const byte = dataView.getUint8(offset);
+                    if (byte === 0) break; // null terminator
+                    if (byte < 32 || byte > 126) break; // non-printable
+                    str += String.fromCharCode(byte);
+                    offset++;
+                }
+                
+                // If we found a reasonable string, record it
+                if (str.length >= 3 && str.length <= 100) {
+                    analysis.strings.push({
+                        offset: strStart,
+                        value: str,
+                        hex: Array.from(new Uint8Array(buffer, strStart, str.length))
+                            .map(b => b.toString(16).padStart(2, '0')).join(' ')
+                    });
+                }
+                offset++;
+            }
+            
+            // Look for repeated structures (common in GameObject files)
+            const chunkSize = 32; // Try 32-byte chunks
+            const chunks = {};
+            for (let i = 0; i < buffer.byteLength - chunkSize; i += chunkSize) {
+                const chunk = Array.from(new Uint8Array(buffer, i, chunkSize))
+                    .map(b => b.toString(16).padStart(2, '0')).join('');
+                chunks[chunk] = (chunks[chunk] || 0) + 1;
+            }
+            
+            // Find repeated patterns
+            Object.entries(chunks).forEach(([chunk, count]) => {
+                if (count > 1) {
+                    analysis.patterns.push({
+                        pattern: chunk,
+                        occurrences: count,
+                        size: chunkSize
+                    });
+                }
+            });
+            
+            // Analyze potential data types at various offsets
+            const commonOffsets = [0, 4, 8, 12, 16, 20, 24, 28, 32, 48, 64];
+            commonOffsets.forEach(offset => {
+                if (offset + 4 <= buffer.byteLength) {
+                    const uint32_le = dataView.getUint32(offset, true);
+                    const uint32_be = dataView.getUint32(offset, false);
+                    const float32 = dataView.getFloat32(offset, true);
+                    
+                    analysis.possibleFields[`offset_${offset}`] = {
+                        uint32_le,
+                        uint32_be,
+                        float32: isFinite(float32) ? float32 : null,
+                        hex: Array.from(new Uint8Array(buffer, offset, 4))
+                            .map(b => b.toString(16).padStart(2, '0')).join(' ')
+                    };
+                }
+            });
+            
+            return analysis;
+        };
+        
+        const analyzeGobFiles = async () => {
+            const gobFiles = Object.entries(allFiles).filter(([path]) => 
+                path.toLowerCase().endsWith('.gob')
+            );
+            
+            if (gobFiles.length === 0) {
+                alert('No .gob files found in the loaded directory. Please load a Matrix Online directory containing GameObject files.');
+                return;
+            }
+            
+            // Create analysis modal
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center';
+            modal.innerHTML = `
+                <div class="bg-gray-900 border border-green-500 p-6 rounded max-w-6xl max-h-full overflow-auto m-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-green-400">🔬 GameObject (.gob) File Analysis</h2>
+                        <button class="text-red-400 text-xl font-bold hover:text-red-300" onclick="this.closest('.fixed').remove()">&times;</button>
+                    </div>
+                    <div id="gobAnalysisContent">
+                        <div class="text-center">
+                            <div class="inline-block w-8 h-8 border-t-2 border-r-2 border-green-500 rounded-full animate-spin mr-3"></div>
+                            <span>Analyzing ${gobFiles.length} .gob files...</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            try {
+                const analysisResults = [];
+                
+                for (const [path, fileInfo] of gobFiles.slice(0, 10)) { // Limit to first 10 for performance
+                    const fileName = path.split('/').pop();
+                    const file = fileInfo.file;
+                    
+                    const arrayBuffer = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = e => resolve(e.target.result);
+                        reader.onerror = reject;
+                        reader.readAsArrayBuffer(file);
+                    });
+                    
+                    const analysis = analyzeGobFileStructure(arrayBuffer);
+                    analysisResults.push({
+                        fileName,
+                        path,
+                        analysis
+                    });
+                }
+                
+                // Display results
+                const content = document.getElementById('gobAnalysisContent');
+                content.innerHTML = generateGobAnalysisHTML(analysisResults);
+                
+            } catch (error) {
+                const content = document.getElementById('gobAnalysisContent');
+                content.innerHTML = `<div class="text-red-400">Error analyzing .gob files: ${error.message}</div>`;
+            }
+        };
+        
+        const generateGobAnalysisHTML = (results) => {
+            let html = `
+                <div class="mb-4">
+                    <h3 class="text-md font-bold mb-2 text-green-400">Analysis Summary</h3>
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <div class="text-center border border-green-500 p-3 rounded">
+                            <div class="text-xl font-bold text-green-400">${results.length}</div>
+                            <div class="text-xs">Files Analyzed</div>
+                        </div>
+                        <div class="text-center border border-green-500 p-3 rounded">
+                            <div class="text-xl font-bold text-green-400">${results.reduce((sum, r) => sum + r.analysis.strings.length, 0)}</div>
+                            <div class="text-xs">Strings Found</div>
+                        </div>
+                        <div class="text-center border border-green-500 p-3 rounded">
+                            <div class="text-xl font-bold text-green-400">${results.reduce((sum, r) => sum + r.analysis.patterns.length, 0)}</div>
+                            <div class="text-xs">Patterns Detected</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            results.forEach((result, index) => {
+                html += `
+                    <div class="mb-6 border border-green-500 rounded p-4">
+                        <h4 class="text-sm font-bold mb-2 text-green-400">📄 ${result.fileName}</h4>
+                        <div class="text-xs mb-2 opacity-70">${result.path}</div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Header Analysis -->
+                            <div>
+                                <h5 class="text-xs font-bold mb-1 text-yellow-400">🏷️ File Header</h5>
+                                <div class="bg-black p-2 rounded text-xs font-mono">
+                                    <div>Size: ${result.analysis.fileSize} bytes</div>
+                                    <div>Magic: 0x${result.analysis.header.magicNumber}</div>
+                                    <div>Possible Version: ${result.analysis.header.possibleVersion}</div>
+                                    <div>Header Hex:</div>
+                                    <div class="text-green-300 break-all">${result.analysis.header.hexDump.substring(0, 48)}...</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Strings Found -->
+                            <div>
+                                <h5 class="text-xs font-bold mb-1 text-blue-400">📝 Strings (${result.analysis.strings.length})</h5>
+                                <div class="bg-black p-2 rounded max-h-32 overflow-y-auto">
+                                    ${result.analysis.strings.slice(0, 5).map(str => `
+                                        <div class="text-xs mb-1">
+                                            <span class="text-yellow-300">@${str.offset.toString(16).padStart(4, '0')}:</span>
+                                            <span class="text-blue-300">"${str.value}"</span>
+                                        </div>
+                                    `).join('')}
+                                    ${result.analysis.strings.length > 5 ? `<div class="text-xs text-gray-400">...and ${result.analysis.strings.length - 5} more</div>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Potential Data Fields -->
+                        <div class="mt-4">
+                            <h5 class="text-xs font-bold mb-1 text-purple-400">🔢 Potential Data Fields</h5>
+                            <div class="bg-black p-2 rounded">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                    ${Object.entries(result.analysis.possibleFields).slice(0, 8).map(([offset, data]) => `
+                                        <div class="border border-gray-700 p-1 rounded">
+                                            <div class="text-yellow-300">${offset}:</div>
+                                            <div class="text-green-300">uint32: ${data.uint32_le}</div>
+                                            ${data.float32 !== null ? `<div class="text-blue-300">float: ${data.float32.toFixed(2)}</div>` : ''}
+                                            <div class="text-gray-400 font-mono">${data.hex}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${result.analysis.patterns.length > 0 ? `
+                            <!-- Patterns -->
+                            <div class="mt-4">
+                                <h5 class="text-xs font-bold mb-1 text-red-400">🔄 Repeated Patterns</h5>
+                                <div class="bg-black p-2 rounded max-h-24 overflow-y-auto">
+                                    ${result.analysis.patterns.slice(0, 3).map(pattern => `
+                                        <div class="text-xs mb-1">
+                                            <span class="text-red-300">${pattern.occurrences}x occurrences</span>
+                                            <span class="text-gray-400 font-mono">${pattern.pattern.substring(0, 32)}...</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            html += `
+                <div class="mt-6 p-4 border border-yellow-500 bg-yellow-900 bg-opacity-20 rounded">
+                    <h4 class="text-sm font-bold mb-2 text-yellow-400">💡 Analysis Insights</h4>
+                    <ul class="text-xs space-y-1">
+                        <li>• Look for consistent magic numbers across files to identify format versions</li>
+                        <li>• String patterns may indicate object names, class types, or script references</li>
+                        <li>• Repeated patterns suggest structured data (arrays, object definitions)</li>
+                        <li>• Compare small vs large files to understand basic vs complex GameObjects</li>
+                        <li>• Float values might represent positions, rotations, or scale factors</li>
+                    </ul>
+                </div>
+            `;
+            
+            return html;
+        };
+
         // Component: GameObjects Log Analyzer
         const GameObjectsAnalyzer = ({ allFiles }) => {
             const [selectedLog, setSelectedLog] = useState(null);
             const [analyzedData, setAnalyzedData] = useState(null);
             const [activeTab, setActiveTab] = useState('overview');
             const [searchTerm, setSearchTerm] = useState('');
+            
+            // Make analyzeGobFiles function available in component scope
+            const handleGobAnalysis = () => {
+                analyzeGobFiles();
+            };
             const [filterType, setFilterType] = useState('all');
             const [sortBy, setSortBy] = useState('name');
             const [sortOrder, setSortOrder] = useState('asc');
@@ -5848,6 +6115,20 @@
                         <p className="text-xs">
                             <strong>Expert Advice:</strong> "You have to flail at it until you understand it." - Morpheus
                         </p>
+                    </div>
+                    
+                    {/* .gob File Analyzer Section */}
+                    <div className="bg-blue-900 bg-opacity-20 border border-blue-500 p-3 rounded mb-3">
+                        <h4 className="text-sm font-bold mb-1 text-blue-400">🔬 .gob File Hex Analyzer</h4>
+                        <p className="text-xs mb-2">
+                            Analyze GameObject (.gob) binary files to decode their hex structure and understand the data format.
+                        </p>
+                        <button
+                            className="px-3 py-1 text-xs border border-blue-500 bg-blue-900 bg-opacity-20 hover:bg-opacity-40 text-blue-400 rounded"
+                            onClick={handleGobAnalysis}
+                        >
+                            🔍 Analyze All .gob Files
+                        </button>
                     </div>
                     
                     {/* PKB Archive Information */}
