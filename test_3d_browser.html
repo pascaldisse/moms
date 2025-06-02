@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOMS 3D Model Browser Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #000;
+            color: #00ff00;
+            padding: 20px;
+            margin: 0;
+        }
+        .test-section {
+            border: 1px solid #00ff00;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .test-result {
+            padding: 5px 0;
+        }
+        .pass { color: #00ff00; }
+        .fail { color: #ff0000; }
+        .warn { color: #ffff00; }
+        button {
+            background: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        button:hover {
+            background: #004400;
+        }
+        #testLog {
+            background: #001100;
+            border: 1px solid #00ff00;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #00ff00;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 MOMS 3D Model Browser Test</h1>
+    <p>This test loads the MOMS application and tests 3D model extraction and viewing functionality in the browser.</p>
+    
+    <div class="test-section">
+        <h2>📋 Browser Test Controls</h2>
+        <button onclick="runBrowserTests()">🚀 Run All Browser Tests</button>
+        <button onclick="testFileLoading()">📁 Test File Loading</button>
+        <button onclick="testModelParsing()">🔧 Test Model Parsing</button>
+        <button onclick="test3DViewing()">🎮 Test 3D Viewing</button>
+        <button onclick="testPKBExtraction()">📦 Test PKB Extraction</button>
+        <button onclick="clearLog()">🧹 Clear Log</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 Test Results</h2>
+        <div id="testResults"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📝 Test Log</h2>
+        <div id="testLog"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🖥️ MOMS Application</h2>
+        <iframe id="momsFrame" src="/index.html"></iframe>
+    </div>
+
+    <script>
+        let testResults = [];
+        
+        function log(message, type = 'info') {
+            const testLog = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'pass' ? 'pass' : type === 'fail' ? 'fail' : type === 'warn' ? 'warn' : '';
+            testLog.innerHTML += `<div class="${colorClass}">[${timestamp}] ${message}</div>`;
+            testLog.scrollTop = testLog.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        function clearLog() {
+            document.getElementById('testLog').innerHTML = '';
+        }
+        
+        function addTestResult(testName, passed, details = '') {
+            testResults.push({ testName, passed, details });
+            updateResults();
+        }
+        
+        function updateResults() {
+            const resultsDiv = document.getElementById('testResults');
+            const passed = testResults.filter(r => r.passed).length;
+            const total = testResults.length;
+            const successRate = total > 0 ? (passed / total * 100).toFixed(1) : 0;
+            
+            let html = `<div class="test-result">📈 Overall: ${passed}/${total} tests passed (${successRate}%)</div>`;
+            
+            testResults.forEach(result => {
+                const status = result.passed ? '✅ PASS' : '❌ FAIL';
+                const details = result.details ? ` - ${result.details}` : '';
+                html += `<div class="test-result ${result.passed ? 'pass' : 'fail'}">${status} - ${result.testName}${details}</div>`;
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        async function testFileLoading() {
+            log('🔍 Testing file loading functionality...', 'info');
+            
+            try {
+                // Test if cache files exist
+                const testFiles = [
+                    'cache/test_character.moa',
+                    'cache/test_building.prop',
+                    'cache/test_models.pkb',
+                    'cache/packmap_save.lta'
+                ];
+                
+                let filesOk = 0;
+                
+                for (const file of testFiles) {
+                    try {
+                        const response = await fetch(`/${file}`);
+                        if (response.ok) {
+                            const data = await response.arrayBuffer();
+                            log(`✅ File accessible: ${file} (${data.byteLength} bytes)`, 'pass');
+                            filesOk++;
+                        } else {
+                            log(`❌ File not accessible: ${file} (${response.status})`, 'fail');
+                        }
+                    } catch (e) {
+                        log(`❌ File error: ${file} - ${e.message}`, 'fail');
+                    }
+                }
+                
+                const passed = filesOk === testFiles.length;
+                addTestResult('File Loading', passed, `${filesOk}/${testFiles.length} files accessible`);
+                
+                return passed;
+                
+            } catch (error) {
+                log(`❌ File loading test failed: ${error.message}`, 'fail');
+                addTestResult('File Loading', false, error.message);
+                return false;
+            }
+        }
+        
+        async function testModelParsing() {
+            log('🔧 Testing model parsing functionality...', 'info');
+            
+            try {
+                const frame = document.getElementById('momsFrame');
+                const frameWindow = frame.contentWindow;
+                
+                // Wait for the frame to load
+                if (!frameWindow.LithtechParsers) {
+                    log('⏳ Waiting for MOMS to load...', 'warn');
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                }
+                
+                if (frameWindow.LithtechParsers) {
+                    log('✅ LithtechParsers found in MOMS application', 'pass');
+                    
+                    // Check if parsing functions exist
+                    const parsers = ['parseMOA', 'parseABC'];
+                    let parsersOk = 0;
+                    
+                    for (const parser of parsers) {
+                        if (typeof frameWindow.LithtechParsers[parser] === 'function') {
+                            log(`✅ Parser function available: ${parser}`, 'pass');
+                            parsersOk++;
+                        } else {
+                            log(`❌ Parser function missing: ${parser}`, 'fail');
+                        }
+                    }
+                    
+                    const passed = parsersOk === parsers.length;
+                    addTestResult('Model Parsing', passed, `${parsersOk}/${parsers.length} parsers available`);
+                    return passed;
+                    
+                } else {
+                    log('❌ LithtechParsers not found in MOMS application', 'fail');
+                    addTestResult('Model Parsing', false, 'LithtechParsers not loaded');
+                    return false;
+                }
+                
+            } catch (error) {
+                log(`❌ Model parsing test failed: ${error.message}`, 'fail');
+                addTestResult('Model Parsing', false, error.message);
+                return false;
+            }
+        }
+        
+        async function test3DViewing() {
+            log('🎮 Testing 3D viewing functionality...', 'info');
+            
+            try {
+                const frame = document.getElementById('momsFrame');
+                const frameWindow = frame.contentWindow;
+                
+                // Wait for the frame to load
+                if (!frameWindow.THREE) {
+                    log('⏳ Waiting for THREE.js to load...', 'warn');
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                }
+                
+                if (frameWindow.THREE) {
+                    log('✅ THREE.js loaded in MOMS application', 'pass');
+                    
+                    // Check THREE.js components
+                    const components = [
+                        'Scene',
+                        'PerspectiveCamera', 
+                        'WebGLRenderer',
+                        'Mesh',
+                        'BufferGeometry',
+                        'MeshPhongMaterial',
+                        'AmbientLight',
+                        'DirectionalLight'
+                    ];
+                    
+                    let componentsOk = 0;
+                    
+                    for (const component of components) {
+                        if (frameWindow.THREE[component]) {
+                            log(`✅ THREE.js component available: ${component}`, 'pass');
+                            componentsOk++;
+                        } else {
+                            log(`❌ THREE.js component missing: ${component}`, 'fail');
+                        }
+                    }
+                    
+                    // Check OrbitControls
+                    if (frameWindow.THREE.OrbitControls) {
+                        log('✅ OrbitControls available', 'pass');
+                        componentsOk++;
+                        components.push('OrbitControls');
+                    } else {
+                        log('❌ OrbitControls missing', 'fail');
+                    }
+                    
+                    const passed = componentsOk >= components.length * 0.8; // 80% threshold
+                    addTestResult('3D Viewing', passed, `${componentsOk}/${components.length} components available`);
+                    return passed;
+                    
+                } else {
+                    log('❌ THREE.js not found in MOMS application', 'fail');
+                    addTestResult('3D Viewing', false, 'THREE.js not loaded');
+                    return false;
+                }
+                
+            } catch (error) {
+                log(`❌ 3D viewing test failed: ${error.message}`, 'fail');
+                addTestResult('3D Viewing', false, error.message);
+                return false;
+            }
+        }
+        
+        async function testPKBExtraction() {
+            log('📦 Testing PKB extraction functionality...', 'info');
+            
+            try {
+                const frame = document.getElementById('momsFrame');
+                const frameWindow = frame.contentWindow;
+                
+                // Wait for the frame to load
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Check for PKB extraction functions
+                const functions = [
+                    'extractFromPKB',
+                    'MXO_PKB_FILES',
+                    'MXO_PKB_INDEX_DATA'
+                ];
+                
+                let functionsOk = 0;
+                
+                for (const func of functions) {
+                    if (frameWindow[func] !== undefined) {
+                        log(`✅ PKB function/variable available: ${func}`, 'pass');
+                        functionsOk++;
+                    } else {
+                        log(`❌ PKB function/variable missing: ${func}`, 'fail');
+                    }
+                }
+                
+                const passed = functionsOk >= functions.length * 0.67; // 67% threshold
+                addTestResult('PKB Extraction', passed, `${functionsOk}/${functions.length} functions available`);
+                return passed;
+                
+            } catch (error) {
+                log(`❌ PKB extraction test failed: ${error.message}`, 'fail');
+                addTestResult('PKB Extraction', false, error.message);
+                return false;
+            }
+        }
+        
+        async function runBrowserTests() {
+            log('🚀 Starting comprehensive browser tests...', 'info');
+            testResults = []; // Clear previous results
+            
+            const tests = [
+                { name: 'File Loading', func: testFileLoading },
+                { name: 'Model Parsing', func: testModelParsing },
+                { name: '3D Viewing', func: test3DViewing },
+                { name: 'PKB Extraction', func: testPKBExtraction }
+            ];
+            
+            let overallPassed = 0;
+            
+            for (const test of tests) {
+                log(`\n🔍 Running test: ${test.name}`, 'info');
+                try {
+                    const result = await test.func();
+                    if (result) {
+                        overallPassed++;
+                        log(`✅ ${test.name} completed successfully`, 'pass');
+                    } else {
+                        log(`❌ ${test.name} failed`, 'fail');
+                    }
+                } catch (error) {
+                    log(`💥 ${test.name} crashed: ${error.message}`, 'fail');
+                }
+                
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            const successRate = (overallPassed / tests.length * 100).toFixed(1);
+            log(`\n📊 Final Results: ${overallPassed}/${tests.length} tests passed (${successRate}%)`, 
+                overallPassed === tests.length ? 'pass' : overallPassed > 0 ? 'warn' : 'fail');
+            
+            if (overallPassed === tests.length) {
+                log('🎉 All browser tests passed! 3D model extraction and viewing is functional.', 'pass');
+            } else if (overallPassed > 0) {
+                log('⚠️ Some browser tests failed. Partial functionality available.', 'warn');
+            } else {
+                log('🚨 All browser tests failed! 3D functionality may be broken.', 'fail');
+            }
+        }
+        
+        // Auto-run tests after page loads
+        window.addEventListener('load', () => {
+            log('🌐 MOMS 3D Model Browser Test loaded', 'info');
+            log('💡 Click "Run All Browser Tests" to test functionality', 'info');
+            
+            // Wait a bit for the iframe to load, then run tests
+            setTimeout(() => {
+                log('⏳ Auto-starting browser tests in 3 seconds...', 'info');
+                setTimeout(runBrowserTests, 3000);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

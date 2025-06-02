@@ -404,6 +404,49 @@
             return objData;
         };
         
+        // Model loading helper function for testing and programmatic access
+        const loadModel = async (file, parserType = 'auto') => {
+            try {
+                const monitor = window.performanceMonitor?.start('Model Loading');
+                
+                // Auto-detect parser type if not specified
+                if (parserType === 'auto') {
+                    const ext = file.name.toLowerCase().split('.').pop();
+                    if (ext === 'moa') parserType = 'moa';
+                    else if (ext === 'prop') parserType = 'prop';
+                    else if (ext === 'abc') parserType = 'abc';
+                    else parserType = 'moa'; // Default
+                }
+                
+                // Use appropriate parser
+                let parsedData;
+                switch (parserType) {
+                    case 'moa':
+                        parsedData = await LithtechParsers.parseMOA(file);
+                        break;
+                    case 'prop':
+                        parsedData = await LithtechParsers.parsePROP(file);
+                        break;
+                    case 'abc':
+                        parsedData = await LithtechParsers.parseABC(file);
+                        break;
+                    default:
+                        throw new Error(`Unsupported parser type: ${parserType}`);
+                }
+                
+                monitor?.end();
+                console.log('Model loaded successfully:', parsedData);
+                return parsedData;
+                
+            } catch (error) {
+                console.error('Model loading failed:', error);
+                throw error;
+            }
+        };
+        
+        // Make loadModel globally available for testing
+        window.loadModel = loadModel;
+        
         // File parsers for Lithtech engine formats
         const LithtechParsers = {
             // Helper function to read string from buffer

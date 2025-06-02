@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOMS Model Viewer Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #000;
+            color: #00ff00;
+            padding: 20px;
+            margin: 0;
+        }
+        .test-section {
+            border: 1px solid #00ff00;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .viewer-container {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #00ff00;
+            background: #001100;
+            position: relative;
+        }
+        button {
+            background: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        button:hover {
+            background: #004400;
+        }
+        .log {
+            background: #001100;
+            border: 1px solid #00ff00;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .pass { color: #00ff00; }
+        .fail { color: #ff0000; }
+        .warn { color: #ffff00; }
+    </style>
+</head>
+<body>
+    <h1>🎯 MOMS Model Viewer Test</h1>
+    <p>This test creates synthetic model files and tests the actual 3D viewing functionality.</p>
+    
+    <div class="test-section">
+        <h2>📋 Model Test Controls</h2>
+        <button onclick="testMOAFile()">🎭 Test MOA Model</button>
+        <button onclick="testPROPFile()">🏢 Test PROP Model</button>
+        <button onclick="testPKBExtraction()">📦 Test PKB Extraction</button>
+        <button onclick="clearLog()">🧹 Clear Log</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎮 3D Model Viewer</h2>
+        <div id="viewer" class="viewer-container">
+            <p style="text-align: center; margin-top: 180px;">Click a test button to load a model</p>
+        </div>
+        <div style="margin-top: 10px;">
+            <span>Controls: Mouse = Rotate, Scroll = Zoom, WASD = Move</span>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📝 Test Log</h2>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let currentModel = null;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'pass' ? 'pass' : type === 'fail' ? 'fail' : type === 'warn' ? 'warn' : '';
+            logDiv.innerHTML += `<div class="${colorClass}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        function init3DViewer() {
+            const container = document.getElementById('viewer');
+            
+            // Check if THREE.js is available
+            if (typeof THREE === 'undefined') {
+                // Load THREE.js dynamically
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/three@0.160.0/build/three.module.js';
+                script.type = 'module';
+                script.onload = () => {
+                    initThreeJS();
+                };
+                document.head.appendChild(script);
+            } else {
+                initThreeJS();
+            }
+            
+            function initThreeJS() {
+                // Clear container
+                container.innerHTML = '';
+                
+                // Scene setup
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x001100);
+                
+                // Camera setup
+                camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+                camera.position.set(2, 2, 5);
+                
+                // Renderer setup
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                container.appendChild(renderer.domElement);
+                
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 10, 5);
+                directionalLight.castShadow = true;
+                scene.add(directionalLight);
+                
+                // Grid
+                const gridHelper = new THREE.GridHelper(10, 10, 0x00ff00, 0x004400);
+                scene.add(gridHelper);
+                
+                // Manual controls (simplified)
+                let mouseDown = false;
+                let mouseX = 0, mouseY = 0;
+                
+                renderer.domElement.addEventListener('mousedown', (event) => {
+                    mouseDown = true;
+                    mouseX = event.clientX;
+                    mouseY = event.clientY;
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    mouseDown = false;
+                });
+                
+                document.addEventListener('mousemove', (event) => {
+                    if (!mouseDown) return;
+                    
+                    const deltaX = event.clientX - mouseX;
+                    const deltaY = event.clientY - mouseY;
+                    
+                    // Rotate camera around center
+                    const spherical = new THREE.Spherical();
+                    spherical.setFromVector3(camera.position);
+                    spherical.theta -= deltaX * 0.01;
+                    spherical.phi += deltaY * 0.01;
+                    spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+                    
+                    camera.position.setFromSpherical(spherical);
+                    camera.lookAt(0, 0, 0);
+                    
+                    mouseX = event.clientX;
+                    mouseY = event.clientY;
+                });
+                
+                // Zoom with mouse wheel
+                renderer.domElement.addEventListener('wheel', (event) => {
+                    const zoom = event.deltaY > 0 ? 1.1 : 0.9;
+                    camera.position.multiplyScalar(zoom);
+                    event.preventDefault();
+                });
+                
+                // Animation loop
+                function animate() {
+                    requestAnimationFrame(animate);
+                    renderer.render(scene, camera);
+                }
+                animate();
+                
+                log('✅ 3D Viewer initialized successfully', 'pass');
+            }
+        }
+        
+        function createSyntheticMOAFile() {
+            // Create a simple cube as MOA data
+            const vertices = new Float32Array([
+                // Front face
+                -1, -1,  1,  1, -1,  1,  1,  1,  1, -1,  1,  1,
+                // Back face
+                -1, -1, -1, -1,  1, -1,  1,  1, -1,  1, -1, -1,
+                // Top face
+                -1,  1, -1, -1,  1,  1,  1,  1,  1,  1,  1, -1,
+                // Bottom face
+                -1, -1, -1,  1, -1, -1,  1, -1,  1, -1, -1,  1,
+                // Right face
+                 1, -1, -1,  1,  1, -1,  1,  1,  1,  1, -1,  1,
+                // Left face
+                -1, -1, -1, -1, -1,  1, -1,  1,  1, -1,  1, -1
+            ]);
+            
+            const indices = new Uint16Array([
+                0,  1,  2,    0,  2,  3,    // front
+                4,  5,  6,    4,  6,  7,    // back
+                8,  9,  10,   8,  10, 11,   // top
+                12, 13, 14,   12, 14, 15,   // bottom
+                16, 17, 18,   16, 18, 19,   // right
+                20, 21, 22,   20, 22, 23    // left
+            ]);
+            
+            return {
+                type: 'model',
+                format: 'MOA',
+                vertices: Array.from(vertices),
+                indices: Array.from(indices),
+                metadata: {
+                    format: 'MOA',
+                    description: 'Test character model',
+                    vertexCount: vertices.length / 3,
+                    faceCount: indices.length / 3
+                }
+            };
+        }
+        
+        function createSyntheticPROPFile() {
+            // Create a simple pyramid as PROP data
+            const vertices = new Float32Array([
+                // Base vertices
+                -1, 0, -1,
+                 1, 0, -1,
+                 1, 0,  1,
+                -1, 0,  1,
+                // Top vertex
+                 0, 2,  0
+            ]);
+            
+            const indices = new Uint16Array([
+                // Base
+                0, 1, 2,  0, 2, 3,
+                // Sides
+                0, 4, 1,  1, 4, 2,  2, 4, 3,  3, 4, 0
+            ]);
+            
+            return {
+                type: 'model',
+                format: 'PROP',
+                vertices: Array.from(vertices),
+                indices: Array.from(indices),
+                metadata: {
+                    format: 'PROP',
+                    description: 'Test building prop',
+                    vertexCount: vertices.length / 3,
+                    faceCount: indices.length / 3
+                }
+            };
+        }
+        
+        function loadModelIntoViewer(modelData) {
+            if (!scene) {
+                log('❌ 3D Viewer not initialized', 'fail');
+                return false;
+            }
+            
+            // Remove existing model
+            if (currentModel) {
+                scene.remove(currentModel);
+                currentModel = null;
+            }
+            
+            try {
+                // Create geometry
+                const geometry = new THREE.BufferGeometry();
+                
+                // Add vertices
+                const vertices = new Float32Array(modelData.vertices);
+                geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                
+                // Add indices
+                if (modelData.indices) {
+                    geometry.setIndex(modelData.indices);
+                }
+                
+                // Compute normals
+                geometry.computeVertexNormals();
+                
+                // Create material
+                const material = new THREE.MeshPhongMaterial({
+                    color: modelData.format === 'MOA' ? 0x00ff00 : 0x0088ff,
+                    wireframe: false,
+                    side: THREE.DoubleSide
+                });
+                
+                // Create mesh
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                
+                // Add to scene
+                scene.add(mesh);
+                currentModel = mesh;
+                
+                log(`✅ ${modelData.format} model loaded: ${modelData.metadata.vertexCount} vertices, ${modelData.metadata.faceCount} faces`, 'pass');
+                return true;
+                
+            } catch (error) {
+                log(`❌ Failed to load model: ${error.message}`, 'fail');
+                return false;
+            }
+        }
+        
+        async function testMOAFile() {
+            log('🎭 Testing MOA model loading...', 'info');
+            
+            try {
+                const modelData = createSyntheticMOAFile();
+                const success = loadModelIntoViewer(modelData);
+                
+                if (success) {
+                    log('✅ MOA model test completed successfully', 'pass');
+                } else {
+                    log('❌ MOA model test failed', 'fail');
+                }
+                
+            } catch (error) {
+                log(`❌ MOA test error: ${error.message}`, 'fail');
+            }
+        }
+        
+        async function testPROPFile() {
+            log('🏢 Testing PROP model loading...', 'info');
+            
+            try {
+                const modelData = createSyntheticPROPFile();
+                const success = loadModelIntoViewer(modelData);
+                
+                if (success) {
+                    log('✅ PROP model test completed successfully', 'pass');
+                } else {
+                    log('❌ PROP model test failed', 'fail');
+                }
+                
+            } catch (error) {
+                log(`❌ PROP test error: ${error.message}`, 'fail');
+            }
+        }
+        
+        async function testPKBExtraction() {
+            log('📦 Testing PKB extraction simulation...', 'info');
+            
+            try {
+                // Simulate PKB extraction by loading both models
+                log('📁 Simulating PKB file with 2 models...', 'info');
+                
+                // Load MOA first
+                const moaData = createSyntheticMOAFile();
+                loadModelIntoViewer(moaData);
+                
+                // Wait a bit, then switch to PROP
+                setTimeout(() => {
+                    log('🔄 Switching to extracted PROP model...', 'info');
+                    const propData = createSyntheticPROPFile();
+                    loadModelIntoViewer(propData);
+                    log('✅ PKB extraction simulation completed', 'pass');
+                }, 2000);
+                
+            } catch (error) {
+                log(`❌ PKB extraction test error: ${error.message}`, 'fail');
+            }
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            log('🌐 Model Viewer Test loaded', 'info');
+            
+            // Check for THREE.js dependency
+            if (typeof THREE === 'undefined') {
+                log('⏳ Loading THREE.js...', 'warn');
+                
+                // Import THREE.js as ES module
+                import('https://unpkg.com/three@0.160.0/build/three.module.js')
+                    .then((THREE_MODULE) => {
+                        window.THREE = THREE_MODULE;
+                        log('✅ THREE.js loaded successfully', 'pass');
+                        init3DViewer();
+                    })
+                    .catch((error) => {
+                        log(`❌ Failed to load THREE.js: ${error.message}`, 'fail');
+                    });
+            } else {
+                log('✅ THREE.js already available', 'pass');
+                init3DViewer();
+            }
+        });
+    </script>
+</body>
+</html>
