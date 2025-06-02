@@ -1,0 +1,542 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+<CheatEntries>
+<CheatEntry>
+<ID>0</ID>
+<Description>"=== PLAYER STATS ==="</Description>
+<GroupHeader>1</GroupHeader>
+<CheatEntries>
+<CheatEntry>
+<ID>1</ID>
+<Description>"Health"</Description>
+<VariableType>4 Bytes</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>2</ID>
+<Description>"Stamina"</Description>
+<VariableType>4 Bytes</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>3</ID>
+<Description>"Focus"</Description>
+<VariableType>4 Bytes</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>4</ID>
+<Description>"Experience"</Description>
+<VariableType>4 Bytes</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>5</ID>
+<Description>"Money"</Description>
+<VariableType>4 Bytes</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+</CheatEntries>
+</CheatEntry>
+<CheatEntry>
+<ID>10</ID>
+<Description>"=== POSITION ==="</Description>
+<GroupHeader>1</GroupHeader>
+<CheatEntries>
+<CheatEntry>
+<ID>11</ID>
+<Description>"X Coordinate"</Description>
+<VariableType>Float</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>12</ID>
+<Description>"Y Coordinate"</Description>
+<VariableType>Float</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>13</ID>
+<Description>"Z Coordinate"</Description>
+<VariableType>Float</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+</CheatEntries>
+</CheatEntry>
+<CheatEntry>
+<ID>20</ID>
+<Description>"=== MOVEMENT ==="</Description>
+<GroupHeader>1</GroupHeader>
+<CheatEntries>
+<CheatEntry>
+<ID>21</ID>
+<Description>"Speed Multiplier"</Description>
+<VariableType>Float</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>22</ID>
+<Description>"No Clip Mode"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>23</ID>
+<Description>"Super Jump"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>24</ID>
+<Description>"Flight Mode"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+</CheatEntries>
+</CheatEntry>
+<CheatEntry>
+<ID>30</ID>
+<Description>"=== COMBAT ==="</Description>
+<GroupHeader>1</GroupHeader>
+<CheatEntries>
+<CheatEntry>
+<ID>31</ID>
+<Description>"God Mode"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>32</ID>
+<Description>"One Hit Kill"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>33</ID>
+<Description>"Unlimited Ammo"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>34</ID>
+<Description>"No Reload"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>35</ID>
+<Description>"Perfect Accuracy"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>36</ID>
+<Description>"Rapid Fire"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+</CheatEntries>
+</CheatEntry>
+<CheatEntry>
+<ID>40</ID>
+<Description>"=== WORLD CONTROL ==="</Description>
+<GroupHeader>1</GroupHeader>
+<CheatEntries>
+<CheatEntry>
+<ID>41</ID>
+<Description>"Freeze Time"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>42</ID>
+<Description>"Bullet Time"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>43</ID>
+<Description>"Game Speed"</Description>
+<VariableType>Float</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>44</ID>
+<Description>"Weather Control"</Description>
+<VariableType>4 Bytes</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>45</ID>
+<Description>"Time of Day"</Description>
+<VariableType>Float</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+</CheatEntries>
+</CheatEntry>
+<CheatEntry>
+<ID>50</ID>
+<Description>"=== DEBUG OPTIONS ==="</Description>
+<GroupHeader>1</GroupHeader>
+<CheatEntries>
+<CheatEntry>
+<ID>51</ID>
+<Description>"Show NavMesh"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>52</ID>
+<Description>"Wireframe Mode"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>53</ID>
+<Description>"Show Collision"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>54</ID>
+<Description>"Show AI Paths"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>55</ID>
+<Description>"Debug Console"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>56</ID>
+<Description>"FPS Display"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>57</ID>
+<Description>"Memory Stats"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+</CheatEntries>
+</CheatEntry>
+<CheatEntry>
+<ID>60</ID>
+<Description>"=== NPC CONTROL ==="</Description>
+<GroupHeader>1</GroupHeader>
+<CheatEntries>
+<CheatEntry>
+<ID>61</ID>
+<Description>"Freeze NPCs"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>62</ID>
+<Description>"All NPCs Friendly"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>63</ID>
+<Description>"Disable NPC AI"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>64</ID>
+<Description>"NPCs Ignore Player"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>65</ID>
+<Description>"Super NPCs"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+</CheatEntries>
+</CheatEntry>
+<CheatEntry>
+<ID>70</ID>
+<Description>"=== INVENTORY ==="</Description>
+<GroupHeader>1</GroupHeader>
+<CheatEntries>
+<CheatEntry>
+<ID>71</ID>
+<Description>"Infinite Items"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>72</ID>
+<Description>"Max Inventory"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>73</ID>
+<Description>"All Items Available"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+<CheatEntry>
+<ID>74</ID>
+<Description>"Free Shopping"</Description>
+<VariableType>Byte</VariableType>
+<Address>00000000</Address>
+</CheatEntry>
+</CheatEntries>
+</CheatEntry>
+</CheatEntries>
+<UserdefinedSymbols/>
+<LuaScript>
+print("Matrix Online Advanced Auto Scanner")
+
+local foundAddresses = {}
+local scanInProgress = false
+
+function setAddress(id, addr)
+local record = getAddressList().getMemoryRecordByID(id)
+if record and addr then
+record.Address = string.format("%X", addr)
+foundAddresses[id] = addr
+print("Set " .. record.Description .. " to: " .. string.format("%X", addr))
+return true
+end
+return false
+end
+
+function scanPattern(pattern, name, expectedResults)
+print("Scanning for " .. name .. "...")
+local results = AOBScan(pattern)
+if results then
+if results.Count > 0 and expectedResults > results.Count then
+local addr = getAddress(results[0])
+print("Found " .. name .. " at: " .. string.format("%X", addr))
+results.destroy()
+return addr
+else
+print(name .. " scan returned " .. results.Count .. " results expected less than " .. expectedResults)
+end
+results.destroy()
+end
+return nil
+end
+
+function scanValue(value, vtype, name, maxResults, recordId)
+print("Scanning for " .. name .. " value: " .. tostring(value))
+local ms = createMemScan()
+local scanType = soExactValue
+local valueType = vtDword
+if vtype == "float" then valueType = vtFloat end
+ms.firstScan(scanType, valueType, rtTruncated, tostring(value), "", 0x00400000, 0x7FFFFFFF, "", fsmNotAligned, "", false, false, false, false)
+ms.waitTillDone()
+local fl = createFoundList(ms)
+fl.initialize()
+if fl.Count > 0 and fl.Count < maxResults then
+local addr = fl.Address[0]
+if recordId then setAddress(recordId, addr) end
+print("Found " .. name .. " at: " .. string.format("%X", addr))
+fl.destroy()
+ms.destroy()
+return addr
+else
+print(name .. " scan returned " .. fl.Count .. " results expected less than " .. maxResults)
+end
+fl.destroy()
+ms.destroy()
+return nil
+end
+
+function scanHealthPattern()
+local healthValues = {100, 200, 250, 300, 500, 1000}
+for i, value in ipairs(healthValues) do
+local addr = scanValue(value, "dword", "Health(" .. value .. ")", 20, 1)
+if addr then return addr end
+sleep(500)
+end
+return nil
+end
+
+function scanPositionPattern()
+print("Starting position scan - please move your character")
+showMessage("Position Scanner\\n\\nMove your character around for 5 seconds, then click OK")
+local ms = createMemScan()
+ms.firstScan(soUnknownValue, vtFloat, rtTruncated, "", "", 0x00400000, 0x7FFFFFFF, "", fsmNotAligned, "", false, false, false, false)
+ms.waitTillDone()
+sleep(2000)
+ms.nextScan(soChanged, vtFloat, rtTruncated, "", "", nil, fsmNotAligned, "", false, false, false, false)
+ms.waitTillDone()
+sleep(1000)
+ms.nextScan(soChanged, vtFloat, rtTruncated, "", "", nil, fsmNotAligned, "", false, false, false, false)
+ms.waitTillDone()
+local fl = createFoundList(ms)
+fl.initialize()
+if fl.Count > 0 and fl.Count < 100 then
+for i = 0, math.min(fl.Count - 3, 20) do
+local addr1 = fl.Address[i]
+local addr2 = fl.Address[i + 1]
+local addr3 = fl.Address[i + 2]
+if (addr2-addr1)==4 and (addr3-addr2)==4 then
+setAddress(11, addr1)
+setAddress(12, addr2)
+setAddress(13, addr3)
+print("Found position coordinates at addresses " .. string.format("%X", addr1) .. " " .. string.format("%X", addr2) .. " " .. string.format("%X", addr3))
+fl.destroy()
+ms.destroy()
+return true
+end
+end
+end
+fl.destroy()
+ms.destroy()
+return false
+end
+
+function scanSpeedPattern()
+local speedValues = {1.0, 1.5, 2.0, 3.0, 5.0}
+for i, value in ipairs(speedValues) do
+local addr = scanValue(value, "float", "Speed(" .. value .. ")", 15, 21)
+if addr then return addr end
+sleep(500)
+end
+return nil
+end
+
+function scanMatrixPatterns()
+print("Scanning Matrix Online specific patterns...")
+local patterns = {
+{pattern = "55 8B EC 83 EC 10", name = "GameObject Update", expected = 5},
+{pattern = "55 8B EC 56 8B 75 08", name = "IsIndoors Function", expected = 3},
+{pattern = "83 EC 10 53 56 57 8B F9", name = "Player Function", expected = 10},
+{pattern = "D9 1C 24 D9 04 24", name = "Position Update", expected = 20},
+{pattern = "D8 0D ?? ?? ?? ?? D9 1C 24", name = "Speed Multiplier", expected = 15},
+{pattern = "80 3D ?? ?? ?? ?? 00 74", name = "God Mode Check", expected = 25},
+{pattern = "FF 05 ?? ?? ?? ?? A1", name = "Ammo Counter", expected = 30},
+{pattern = "8B 0D ?? ?? ?? ?? 85 C9 74", name = "Health Pointer", expected = 40}
+}
+for i, pat in ipairs(patterns) do
+local addr = scanPattern(pat.pattern, pat.name, pat.expected)
+if addr then
+print("Matrix pattern found: " .. pat.name .. " at " .. string.format("%X", addr))
+end
+sleep(200)
+end
+end
+
+function scanDebugPatterns()
+print("Scanning for debug options...")
+local debugPatterns = {
+{pattern = "75 ?? 80 3D ?? ?? ?? ?? 00", name = "Debug Console", recordId = 55},
+{pattern = "84 C0 74 ?? A1 ?? ?? ?? ??", name = "Wireframe Toggle", recordId = 52},
+{pattern = "38 1D ?? ?? ?? ?? 75 ??", name = "Show Collision", recordId = 53},
+{pattern = "80 3D ?? ?? ?? ?? 00 75 ?? 68", name = "NavMesh Display", recordId = 51}
+}
+for i, pat in ipairs(debugPatterns) do
+local addr = scanPattern(pat.pattern, pat.name, 10)
+if addr and pat.recordId then
+setAddress(pat.recordId, addr)
+end
+sleep(200)
+end
+end
+
+function scanCombatPatterns()
+print("Scanning for combat patterns...")
+local addr = scanPattern("83 ?? ?? 7E ?? C7 ?? ?? ?? ?? ?? ??", "God Mode", 15)
+if addr then setAddress(31, addr) end
+addr = scanPattern("2B ?? ?? 89 ?? ?? 85", "One Hit Kill", 20)
+if addr then setAddress(32, addr) end
+addr = scanPattern("FF ?? ?? ?? ?? ?? 85 C0 7E", "Unlimited Ammo", 25)
+if addr then setAddress(33, addr) end
+end
+
+function scanWorldPatterns()
+print("Scanning for world control patterns...")
+local addr = scanPattern("D9 05 ?? ?? ?? ?? D8 ?? ?? ?? ?? ??", "Game Speed", 10)
+if addr then setAddress(43, addr) end
+addr = scanPattern("A1 ?? ?? ?? ?? 85 C0 0F 84", "Weather Control", 8)
+if addr then setAddress(44, addr) end
+end
+
+function scanNPCPatterns()
+print("Scanning for NPC control patterns...")
+local addr = scanPattern("80 ?? ?? ?? ?? ?? 00 0F 85", "NPC AI Toggle", 12)
+if addr then setAddress(63, addr) end
+addr = scanPattern("8A ?? ?? ?? ?? ?? 84 C0 75", "NPC Friendly", 15)
+if addr then setAddress(62, addr) end
+end
+
+function runFullScan()
+if scanInProgress then
+print("Scan already in progress")
+return
+end
+scanInProgress = true
+print("Starting comprehensive Matrix Online scan...")
+showMessage("Matrix Online Auto Scanner\\n\\nStarting comprehensive scan.\\nThis will take 30-60 seconds.\\n\\nPlease be patient...")
+scanMatrixPatterns()
+sleep(1000)
+scanHealthPattern()
+sleep(1000)
+scanPositionPattern()
+sleep(1000)
+scanSpeedPattern()
+sleep(1000)
+scanDebugPatterns()
+sleep(1000)
+scanCombatPatterns()
+sleep(1000)
+scanWorldPatterns()
+sleep(1000)
+scanNPCPatterns()
+local foundCount = 0
+for k, v in pairs(foundAddresses) do
+foundCount = foundCount + 1
+end
+print("Scan complete! Found " .. foundCount .. " addresses")
+showMessage("Auto scan complete!\\n\\nFound " .. foundCount .. " addresses.\\nCheck the cheat table entries.")
+scanInProgress = false
+end
+
+function onOpenProcess(processname)
+if processname:lower():find("matrix") then
+print("Matrix Online detected: " .. processname)
+print("Process ID: " .. getOpenedProcessID())
+print("Base address: " .. string.format("%X", getAddress(processname)))
+createTimer(nil)
+timer_onTimer = function(sender)
+sender.destroy()
+runFullScan()
+end
+timer.Interval = 3000
+timer.Enabled = true
+else
+print("Attached to: " .. processname .. " (not Matrix Online)")
+end
+end
+
+function manualScan()
+runFullScan()
+end
+
+if getOpenedProcessID() ~= 0 then
+local processName = getProcessNameFromID(getOpenedProcessID())
+if processName then
+onOpenProcess(processName)
+else
+print("Unknown process attached")
+end
+else
+print("No process attached. Attach to matrix.exe to begin scanning.")
+end
+
+print("Matrix Online Advanced Scanner Ready")
+print("Features: Health, Position, Speed, Combat, Debug, NPC, World Control")
+print("Auto-scan will start 3 seconds after attaching to Matrix Online")
+</LuaScript>
+</CheatTable>
