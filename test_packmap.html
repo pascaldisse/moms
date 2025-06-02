@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test packmap_save.lta</title>
+</head>
+<body>
+    <h1>Test packmap_save.lta Format</h1>
+    <input type="file" id="fileInput" accept=".lta">
+    <pre id="output"></pre>
+    
+    <script>
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const buffer = await file.arrayBuffer();
+            const view = new DataView(buffer);
+            const decoder = new TextDecoder('ascii');
+            
+            let output = `File: ${file.name}\n`;
+            output += `Size: ${buffer.byteLength} bytes\n\n`;
+            
+            // Check first few bytes
+            output += "First 100 bytes as hex:\n";
+            let hex = "";
+            for (let i = 0; i < Math.min(100, buffer.byteLength); i++) {
+                hex += view.getUint8(i).toString(16).padStart(2, '0') + " ";
+                if ((i + 1) % 16 === 0) hex += "\n";
+            }
+            output += hex + "\n\n";
+            
+            // Try to read as text
+            try {
+                const text = decoder.decode(buffer.slice(0, 1000));
+                output += "First 1000 bytes as text:\n";
+                output += text.replace(/[\x00-\x1F\x7F-\xFF]/g, '.') + "\n\n";
+            } catch (e) {
+                output += "Could not decode as text\n\n";
+            }
+            
+            // Look for patterns
+            output += "Looking for file patterns:\n";
+            const bytes = new Uint8Array(buffer);
+            const searchPatterns = [".moa", ".prop", ".pkb", ".txa", "resource/"];
+            
+            for (const pattern of searchPatterns) {
+                const encoder = new TextEncoder();
+                const patternBytes = encoder.encode(pattern);
+                let found = false;
+                
+                for (let i = 0; i < bytes.length - patternBytes.length; i++) {
+                    let match = true;
+                    for (let j = 0; j < patternBytes.length; j++) {
+                        if (bytes[i + j] !== patternBytes[j]) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match) {
+                        output += `Found "${pattern}" at offset ${i}\n`;
+                        // Show context
+                        const start = Math.max(0, i - 20);
+                        const end = Math.min(buffer.byteLength, i + pattern.length + 20);
+                        const context = decoder.decode(bytes.slice(start, end)).replace(/[\x00-\x1F\x7F-\xFF]/g, '.');
+                        output += `Context: ...${context}...\n`;
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (!found) {
+                    output += `Pattern "${pattern}" not found\n`;
+                }
+            }
+            
+            document.getElementById('output').textContent = output;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>THREE.js Test</title>
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <h1>THREE.js Loading Test</h1>
+    <div id="status">Loading...</div>
+    
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        
+        // Create a new object that includes all THREE exports plus OrbitControls
+        const THREEWithControls = {
+            ...THREE,
+            OrbitControls: OrbitControls
+        };
+        
+        // Make it available globally
+        window.THREE = THREEWithControls;
+        
+        // Test
+        document.getElementById('status').innerHTML = `
+            THREE loaded: ${!!window.THREE}<br>
+            THREE.OrbitControls loaded: ${!!window.THREE.OrbitControls}<br>
+            Success!
+        `;
+        
+        console.log('THREE:', window.THREE);
+        console.log('THREE.OrbitControls:', window.THREE.OrbitControls);
+    </script>
+</body>
+</html>
