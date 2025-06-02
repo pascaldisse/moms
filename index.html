@@ -6635,17 +6635,22 @@
             
             try {
                 // Try to load the test index file
+                console.log('🔍 Attempting to auto-load index file from /cache/packmap_save.lta');
                 const response = await fetch('/cache/packmap_save.lta');
+                console.log('📡 Fetch response status:', response.status, response.statusText);
                 if (response.ok) {
                     const arrayBuffer = await response.arrayBuffer();
                     window.MXO_PKB_INDEX_DATA = new Uint8Array(arrayBuffer);
                     window.MXO_PKB_INDEX_NAME = 'packmap_save.lta';
-                    // console.log(`Auto-loaded index file: packmap_save.lta (${window.MXO_PKB_INDEX_DATA.length} bytes)`);
+                    console.log(`✅ Auto-loaded index file: packmap_save.lta (${window.MXO_PKB_INDEX_DATA.length} bytes)`);
                     return true;
+                } else {
+                    console.warn('❌ Failed to fetch index file, status:', response.status);
                 }
             } catch (error) {
-                console.warn('Could not auto-load index file:', error);
+                console.warn('❌ Could not auto-load index file:', error);
             }
+            console.warn('⚠️ Index file auto-loading failed');
             return false;
         };
 
@@ -6657,7 +6662,7 @@
             if (!window.MXO_PKB_INDEX_DATA) {
                 const loaded = await window.loadIndexFile();
                 if (!loaded) {
-                    console.error('No index file loaded. Please load packmap_save.lta first.');
+                    console.warn('⚠️ No index file loaded. Please load packmap_save.lta first, or place it in the cache/ directory.');
                     perf.end();
                     return [];
                 }
@@ -6665,7 +6670,8 @@
             
             const pkbData = window.MXO_PKB_FILES && window.MXO_PKB_FILES[pkbFileName.toLowerCase()];
             if (!pkbData) {
-                console.error(`PKB file ${pkbFileName} not loaded`);
+                console.warn(`⚠️ PKB file ${pkbFileName} not loaded in memory. Available PKB files:`, Object.keys(window.MXO_PKB_FILES || {}));
+                console.warn(`💡 To extract from ${pkbFileName}, first load it by clicking on the file in the Archives tab.`);
                 return [];
             }
             

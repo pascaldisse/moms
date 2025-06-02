@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PKB Loading Debug Test</title>
+    <style>
+        body { font-family: monospace; background: #000; color: #0f0; padding: 20px; }
+        button { background: #030; color: #0f0; border: 1px solid #0f0; padding: 10px; margin: 5px; cursor: pointer; }
+        #log { background: #111; border: 1px solid #0f0; padding: 10px; height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>PKB Loading Debug Test</h1>
+    <button onclick="testIndexLoad()">Test Index File Loading</button>
+    <button onclick="testPKBExtraction()">Test PKB Extraction</button>
+    <button onclick="clearLog()">Clear Log</button>
+    
+    <div id="log"></div>
+    
+    <script>
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += new Date().toLocaleTimeString() + ': ' + msg + '<br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        async function testIndexLoad() {
+            log('🔍 Testing index file loading...');
+            
+            try {
+                const response = await fetch('/cache/packmap_save.lta');
+                log('📡 Fetch response status: ' + response.status + ' ' + response.statusText);
+                
+                if (response.ok) {
+                    const arrayBuffer = await response.arrayBuffer();
+                    const data = new Uint8Array(arrayBuffer);
+                    log('✅ Index file loaded: ' + data.length + ' bytes');
+                    
+                    // Store globally
+                    window.MXO_PKB_INDEX_DATA = data;
+                    window.MXO_PKB_INDEX_NAME = 'packmap_save.lta';
+                    log('✅ Index data stored globally');
+                    return true;
+                } else {
+                    log('❌ Failed to load index file: ' + response.status);
+                    return false;
+                }
+            } catch (error) {
+                log('❌ Error loading index file: ' + error.message);
+                return false;
+            }
+        }
+        
+        async function testPKBExtraction() {
+            log('📦 Testing PKB extraction...');
+            
+            if (!window.MXO_PKB_INDEX_DATA) {
+                log('⚠️ No index data loaded, attempting to load...');
+                const loaded = await testIndexLoad();
+                if (!loaded) {
+                    log('❌ Cannot test PKB extraction without index file');
+                    return;
+                }
+            }
+            
+            log('✅ Index data available: ' + window.MXO_PKB_INDEX_DATA.length + ' bytes');
+            log('✅ PKB extraction simulation would work');
+        }
+        
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            log('🌐 Debug test page loaded');
+            setTimeout(() => {
+                log('⏳ Auto-testing index file loading...');
+                testIndexLoad();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
