@@ -102,6 +102,7 @@
         .mb-2 { margin-bottom: 0.5rem; }
         .mb-4 { margin-bottom: 1rem; }
         .mr-2 { margin-right: 0.5rem; }
+        .ml-2 { margin-left: 0.5rem; }
         .mt-2 { margin-top: 0.5rem; }
         
         /* Text utilities */
@@ -187,6 +188,41 @@
             overflow: hidden;
             background-color: var(--matrix-dark);
             border-left: 1px solid var(--matrix-green);
+        }
+        
+        /* Tab styling */
+        .tab-container {
+            display: flex;
+            border-bottom: 1px solid var(--matrix-green);
+            background-color: var(--matrix-dark);
+        }
+        
+        .tab-button {
+            background-color: var(--matrix-dark);
+            color: var(--matrix-green);
+            border: 1px solid var(--matrix-green);
+            border-bottom: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            margin-right: 0.25rem;
+            transition: all 0.3s;
+            font-family: inherit;
+            border-radius: 0.25rem 0.25rem 0 0;
+        }
+        
+        .tab-button:hover {
+            background-color: var(--matrix-gray);
+        }
+        
+        .tab-button.active {
+            background-color: var(--matrix-green);
+            color: var(--matrix-black);
+            border-bottom: 1px solid var(--matrix-green);
+        }
+        
+        .tab-content {
+            padding: 1rem;
+            background-color: var(--matrix-black);
         }
         
         .file-tree-item {
@@ -7020,6 +7056,14 @@ User Agent: ${navigator.userAgent}`;
                                                 
                                                 for (const [path, fileInfo] of pkbFiles) {
                                                     const fileName = path.split('/').pop();
+                                                    
+                                                    // Check if PKB file is actually loaded before trying to extract
+                                                    const pkbData = window.MXO_PKB_FILES && window.MXO_PKB_FILES[fileName.toLowerCase()];
+                                                    if (!pkbData) {
+                                                        // console.log(`Skipping ${fileName} - not loaded in memory`);
+                                                        continue;
+                                                    }
+                                                    
                                                     // console.log(`Extracting from ${fileName}...`);
                                                     
                                                     // Use the new extraction function
@@ -7122,6 +7166,15 @@ User Agent: ${navigator.userAgent}`;
                                                                     button.textContent = 'Extracting...';
                                                                     
                                                                     try {
+                                                                        // Check if PKB file is loaded before extraction
+                                                                        const pkbData = window.MXO_PKB_FILES && window.MXO_PKB_FILES[fileName.toLowerCase()];
+                                                                        if (!pkbData) {
+                                                                            button.textContent = 'Load PKB First';
+                                                                            button.disabled = false;
+                                                                            alert(`PKB file ${fileName} needs to be loaded first. Please click on the file to load it into memory.`);
+                                                                            return;
+                                                                        }
+                                                                        
                                                                         // Use the new extraction function
                                                                         const extractedFiles = await window.extractFromPKB(fileName);
                                                                         
