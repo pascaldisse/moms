@@ -9,37 +9,18 @@
     <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
-    <script>
-        // Ensure THREE is available globally before loading OrbitControls
-        window.THREE = window.THREE || THREE;
+    
+    <!-- Import map for THREE.js ES modules -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+        }
+    }
     </script>
-    <script>
-        // Load OrbitControls manually with proper initialization
-        (function() {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/controls/OrbitControls.js';
-            script.onload = function() {
-                // Verify OrbitControls loaded
-                console.log('OrbitControls script loaded');
-                console.log('window.THREE:', !!window.THREE);
-                console.log('THREE.OrbitControls after load:', !!window.THREE?.OrbitControls);
-            };
-            script.onerror = function() {
-                console.error('Failed to load OrbitControls script');
-            };
-            document.head.appendChild(script);
-        })();
-        
-        // Verify after delay
-        setTimeout(() => {
-            console.log('THREE.OrbitControls available:', !!window.THREE?.OrbitControls);
-            if (!window.THREE?.OrbitControls) {
-                console.error('OrbitControls failed to initialize. Falling back to manual controls.');
-            }
-        }, 1000);
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/loaders/GLTFLoader.js"></script>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Monaco Editor -->
@@ -197,18 +178,49 @@
     
     <div id="root"></div>
 
+    
+    <!-- Load THREE.js modules and initialize them globally -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        
+        // Make THREE and its modules available globally for React components
+        window.THREE = THREE;
+        window.OrbitControls = OrbitControls;
+        window.GLTFLoader = GLTFLoader;
+        
+        // Signal that THREE.js is loaded
+        window.dispatchEvent(new Event('threejs-loaded'));
+        
+        console.log('THREE.js ES modules loaded successfully');
+        console.log('THREE version:', THREE.REVISION);
+        console.log('OrbitControls available:', !!OrbitControls);
+        console.log('GLTFLoader available:', !!GLTFLoader);
+    </script>
+
     <script type="text/babel">
+        // Wait for THREE.js modules to load
+        function waitForThreeJS() {
+            return new Promise((resolve) => {
+                if (window.THREE && window.OrbitControls) {
+                    resolve();
+                } else {
+                    window.addEventListener('threejs-loaded', resolve, { once: true });
+                }
+            });
+        }
         // Main React Application
         const { useState, useEffect, useRef } = React;
         
         // File type definitions for Lithtech engine
         const FILE_TYPES = {
             MODEL: {
-                extensions: ['.abc', '.moa', '.prop', '.iprf', '.eprf', '.mga', '.mgc'],
+                extensions: ['.abc', '.mob'],
                 icon: '📊',
                 name: 'Model',
-                description: 'Matrix Online 3D Model (Characters/Props/Collections)',
-                parser: 'parseMOA'
+                description: 'Lithtech 3D Model (Actor Binary Cache / Matrix Online Binary)',
+                parser: 'parseMOB'
             },
             TEXTURE: {
                 extensions: ['.dtx', '.dds', '.tga', '.png', '.jpg', '.jpeg'],
@@ -294,109 +306,6 @@
             return FILE_TYPES.OTHER;
         };
         
-        // Export model to OBJ format (as mentioned in instructions.txt step 4)
-        const exportToOBJ = (mesh) => {
-            let objData = `# Exported from Matrix Online Modding Suite (MOMS)\n`;
-            objData += `# File generated on ${new Date().toISOString()}\n\n`;
-            
-            if (!mesh) {
-                return objData + `# Error: No mesh data available\n`;
-            }
-            
-            let totalVertices = 0;
-            
-            // Traverse the mesh to handle both single meshes and groups
-            mesh.traverse((child) => {
-                if (child.isMesh && child.geometry) {
-                    const geometry = child.geometry;
-                    const position = geometry.attributes.position;
-                    const normal = geometry.attributes.normal;
-                    const uv = geometry.attributes.uv;
-                    const index = geometry.index;
-                    
-                    if (!position) {
-                        objData += `# Warning: Mesh "${child.name || 'unnamed'}" has no position data\n`;
-                        return;
-                    }
-                    
-                    objData += `\n# Mesh: ${child.name || 'unnamed'}\n`;
-                    objData += `# Vertices: ${position.count}\n`;
-                    
-                    // Write vertices
-                    for (let i = 0; i < position.count; i++) {
-                        const x = position.getX(i);
-                        const y = position.getY(i);
-                        const z = position.getZ(i);
-                        objData += `v ${x.toFixed(6)} ${y.toFixed(6)} ${z.toFixed(6)}\n`;
-                    }
-                    
-                    // Write texture coordinates if available
-                    if (uv) {
-                        objData += `\n# Texture coordinates\n`;
-                        for (let i = 0; i < uv.count; i++) {
-                            const u = uv.getX(i);
-                            const v = uv.getY(i);
-                            objData += `vt ${u.toFixed(6)} ${v.toFixed(6)}\n`;
-                        }
-                    }
-                    
-                    // Write normals if available
-                    if (normal) {
-                        objData += `\n# Normals\n`;
-                        for (let i = 0; i < normal.count; i++) {
-                            const nx = normal.getX(i);
-                            const ny = normal.getY(i);
-                            const nz = normal.getZ(i);
-                            objData += `vn ${nx.toFixed(6)} ${ny.toFixed(6)} ${nz.toFixed(6)}\n`;
-                        }
-                    }
-                    
-                    // Write faces
-                    objData += `\n# Faces\n`;
-                    if (index) {
-                        // Indexed geometry
-                        for (let i = 0; i < index.count; i += 3) {
-                            const a = index.getX(i) + totalVertices + 1;     // OBJ is 1-indexed
-                            const b = index.getX(i + 1) + totalVertices + 1;
-                            const c = index.getX(i + 2) + totalVertices + 1;
-                            
-                            if (uv && normal) {
-                                objData += `f ${a}/${a}/${a} ${b}/${b}/${b} ${c}/${c}/${c}\n`;
-                            } else if (uv) {
-                                objData += `f ${a}/${a} ${b}/${b} ${c}/${c}\n`;
-                            } else if (normal) {
-                                objData += `f ${a}//${a} ${b}//${b} ${c}//${c}\n`;
-                            } else {
-                                objData += `f ${a} ${b} ${c}\n`;
-                            }
-                        }
-                    } else {
-                        // Non-indexed geometry
-                        for (let i = 0; i < position.count; i += 3) {
-                            const a = i + totalVertices + 1;
-                            const b = i + 1 + totalVertices + 1;
-                            const c = i + 2 + totalVertices + 1;
-                            
-                            if (uv && normal) {
-                                objData += `f ${a}/${a}/${a} ${b}/${b}/${b} ${c}/${c}/${c}\n`;
-                            } else if (uv) {
-                                objData += `f ${a}/${a} ${b}/${b} ${c}/${c}\n`;
-                            } else if (normal) {
-                                objData += `f ${a}//${a} ${b}//${b} ${c}//${c}\n`;
-                            } else {
-                                objData += `f ${a} ${b} ${c}\n`;
-                            }
-                        }
-                    }
-                    
-                    totalVertices += position.count;
-                }
-            });
-            
-            objData += `\n# Export complete. Total vertices: ${totalVertices}\n`;
-            return objData;
-        };
-        
         // File parsers for Lithtech engine formats
         const LithtechParsers = {
             // ABC Model Parser (simplified)
@@ -439,8 +348,8 @@
                 });
             },
             
-            // MGA/MGC Model Group Parser (Matrix Online Model Collections)
-            parseMGA: async (file) => {
+            // MOB Model Parser (Matrix Online Binary)
+            parseMOB: async (file) => {
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.onload = (e) => {
@@ -448,42 +357,9 @@
                             const buffer = e.target.result;
                             const dataView = new DataView(buffer);
                             
-                            console.log(`Parsing MXO model group/collection file: ${file.name} (${buffer.byteLength} bytes)`);
-                            
-                            // Model groups are collections of references to other models
-                            // Return placeholder data for now
-                            resolve({
-                                type: 'model',
-                                vertices: [],
-                                indices: [],
-                                uvs: [],
-                                normals: [],
-                                metadata: {
-                                    format: file.name.endsWith('.mga') ? 'MGA' : 'MGC',
-                                    fileType: 'Model Group/Collection',
-                                    description: 'Collection of model references'
-                                }
-                            });
-                        } catch (error) {
-                            console.error('Error parsing MGA/MGC file:', error);
-                            reject(error);
-                        }
-                    };
-                    reader.onerror = reject;
-                    reader.readAsArrayBuffer(file);
-                });
-            },
-            
-            // MOA/PROP Model Parser (Matrix Online Assets) - Corrected from MOB misconception
-            parseMOA: async (file) => {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        try {
-                            const buffer = e.target.result;
-                            const dataView = new DataView(buffer);
-                            
-                            console.log(`Parsing MXO model file: ${file.name} (${buffer.byteLength} bytes)`);
+                            // Check MOB header - typically these start with a signature or version
+                            const header = new Uint8Array(buffer, 0, 8);
+                            console.log('MOB file header bytes:', Array.from(header).map(b => b.toString(16).padStart(2, '0')).join(' '));
                             
                             // Generate a thumbnail for the model
                             const createThumbnail = () => {
@@ -500,7 +376,7 @@
                                 ctx.strokeStyle = '#00ff00';
                                 ctx.lineWidth = 2;
                                 
-                                // Draw a wireframe model
+                                // Draw a simplified wireframe representation of the model
                                 ctx.beginPath();
                                 ctx.moveTo(64, 30);  // Top
                                 ctx.lineTo(30, 98);  // Bottom left
@@ -516,267 +392,236 @@
                                 return canvas.toDataURL('image/png');
                             };
                             
-                            // Enhanced MXO model format parsing - Based on Lithtech Discovery engine
-                            // Scale: 1 unit = 1 centimeter
-                            const analyzeHeader = () => {
-                                const header = new Uint8Array(buffer, 0, Math.min(256, buffer.byteLength));
-                                const headerBytes = Array.from(header.slice(0, 32)).map(b => b.toString(16).padStart(2, '0')).join(' ');
-                                console.log('MXO model file header bytes:', headerBytes);
+                            // Actual MOB format parsing
+                            // This implementation tries to interpret the binary format based on common
+                            // 3D model binary formats. It attempts to read vertex, normal, UV and face data.
+                            let offset = 0;
+                            
+                            // Try to find a header/signature
+                            // In many model formats, there's a file signature followed by version and counts
+                            const hasSignature = String.fromCharCode(...header.slice(0, 4)) === 'MBFM';
+                            if (hasSignature) {
+                                offset = 8; // Skip signature and version
+                            }
+                            
+                            // Try to read header more carefully
+                            // MOB files appear to have a different structure
+                            let vertexCount = 0;
+                            let indexCount = 0;
+                            
+                            // Try reading at different offsets to find valid counts
+                            const tryOffsets = [0, 4, 8, 12, 16, 20, 24, 28, 32];
+                            for (const tryOffset of tryOffsets) {
+                                if (tryOffset + 8 <= buffer.byteLength) {
+                                    const v = dataView.getUint32(tryOffset, true);
+                                    const i = dataView.getUint32(tryOffset + 4, true);
+                                    if (v > 0 && v < 10000 && i > 0 && i < 30000) {
+                                        vertexCount = v;
+                                        indexCount = i;
+                                        offset = tryOffset + 8;
+                                        console.log(`Found valid counts at offset ${tryOffset}: vertices=${v}, indices=${i}`);
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // Validate counts
+                            const isValidCount = vertexCount > 0 && vertexCount < 100000 && 
+                                                indexCount > 0 && indexCount < 500000;
+                            
+                            if (!isValidCount) {
+                                console.warn('Invalid vertex/index counts detected. Using estimation methods.');
                                 
-                                // Check for common Lithtech signatures
-                                const signatures = [
-                                    { name: 'MOA', bytes: [0x4D, 0x4F, 0x41] },      // MOA files (character models)
-                                    { name: 'PROP', bytes: [0x50, 0x52, 0x4F, 0x50] }, // PROP files (static objects)
-                                    { name: 'IPRF', bytes: [0x49, 0x50, 0x52, 0x46] }, // IPRF specialized data
-                                    { name: 'EPRF', bytes: [0x45, 0x50, 0x52, 0x46] }, // EPRF specialized data
-                                    { name: 'LTMP', bytes: [0x4C, 0x54, 0x4D, 0x50] }, // LithTech Model Pack
-                                    { name: 'LTB', bytes: [0x4C, 0x54, 0x42] },        // LithTech Binary
-                                    { name: 'ABC', bytes: [0x41, 0x42, 0x43] }         // Actor Binary Cache
-                                ];
+                                // Estimation - try to guess structure from file size
+                                // Try different vertex size assumptions
+                                const possibleVertexSizes = [12, 24, 32, 36, 48]; // Common vertex structure sizes
+                                let bestVertexSize = 32;
+                                let bestVertexCount = 0;
                                 
-                                for (const sig of signatures) {
-                                    let match = true;
-                                    for (let i = 0; i < sig.bytes.length; i++) {
-                                        if (header[i] !== sig.bytes[i]) {
-                                            match = false;
-                                            break;
+                                // Try to find a vertex size that gives reasonable vertex count
+                                for (const vSize of possibleVertexSizes) {
+                                    const vCount = Math.floor((buffer.byteLength - 64) / vSize);
+                                    if (vCount > 10 && vCount < 10000) {
+                                        bestVertexSize = vSize;
+                                        bestVertexCount = vCount;
+                                        break;
+                                    }
+                                }
+                                
+                                const estimatedVertexCount = bestVertexCount;
+                                
+                                if (estimatedVertexCount > 3 && estimatedVertexCount < 50000) {
+                                    // Attempt to extract vertices using estimation
+                                    const vertices = [];
+                                    const normals = [];
+                                    const uvs = [];
+                                    const indices = [];
+                                    
+                                    offset = 64; // Skip assumed header area
+                                    
+                                    // Try simpler vertex extraction - just positions
+                                    offset = 64; // Common header size
+                                    const stride = bestVertexSize;
+                                    
+                                    for (let i = 0; i < Math.min(estimatedVertexCount, 1000); i++) {
+                                        if (offset + 12 <= buffer.byteLength) {
+                                            const x = dataView.getFloat32(offset, true);
+                                            const y = dataView.getFloat32(offset + 4, true);
+                                            const z = dataView.getFloat32(offset + 8, true);
+                                            
+                                            // More lenient sanity check
+                                            if (Math.abs(x) < 1000 && Math.abs(y) < 1000 && Math.abs(z) < 1000 && 
+                                                !isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                                                vertices.push(x, y, z);
+                                            }
+                                            offset += stride;
                                         }
                                     }
-                                    if (match) {
-                                        console.log(`Found ${sig.name} signature at start of file`);
-                                        return { signature: sig.name, headerSize: 16 };
-                                    }
-                                }
-                                
-                                return { signature: null, headerSize: 0 };
-                            };
-                            
-                            const headerInfo = analyzeHeader();
-                            let offset = headerInfo.headerSize;
-                            
-                            // Try to read header information following instructions.txt structure
-                            const parseStructuredData = () => {
-                                try {
-                                    // Assume 16-byte header as per instructions
-                                    let currentOffset = Math.max(16, offset);
                                     
-                                    // Try to read vertex and face counts (following instructions.txt example)
-                                    if (currentOffset + 8 <= buffer.byteLength) {
-                                        const numVertices = dataView.getUint32(currentOffset, true);
-                                        const numFaces = dataView.getUint32(currentOffset + 4, true);
-                                        currentOffset += 8;
+                                    // If we got too few vertices, try another approach
+                                    if (vertices.length < 30) {
+                                        console.log('First pass got too few vertices, trying alternative parsing...');
+                                        vertices.length = 0;
+                                        offset = 32; // Try different start offset
                                         
-                                        console.log(`Header parsing: vertices=${numVertices}, faces=${numFaces}`);
-                                        
-                                        // Validate counts are reasonable
-                                        if (numVertices > 0 && numVertices < 100000 && numFaces > 0 && numFaces < 200000) {
-                                            const vertices = [];
-                                            const faces = [];
-                                            const normals = [];
-                                            const uvs = [];
+                                        for (let i = 0; i < buffer.byteLength - 12; i += 12) {
+                                            const x = dataView.getFloat32(offset + i, true);
+                                            const y = dataView.getFloat32(offset + i + 4, true);
+                                            const z = dataView.getFloat32(offset + i + 8, true);
                                             
-                                            // Read vertices (3 floats: x, y, z) as per instructions.txt
-                                            for (let i = 0; i < numVertices && currentOffset + 12 <= buffer.byteLength; i++) {
-                                                const x = dataView.getFloat32(currentOffset, true);
-                                                const y = dataView.getFloat32(currentOffset + 4, true);
-                                                const z = dataView.getFloat32(currentOffset + 8, true);
-                                                
-                                                // Validate vertex data
-                                                if (!isNaN(x) && !isNaN(y) && !isNaN(z) && 
-                                                    Math.abs(x) < 10000 && Math.abs(y) < 10000 && Math.abs(z) < 10000) {
-                                                    vertices.push(x, y, z);
-                                                }
-                                                currentOffset += 12;
+                                            if (Math.abs(x) < 100 && Math.abs(y) < 100 && Math.abs(z) < 100 && 
+                                                !isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                                                vertices.push(x, y, z);
+                                                if (vertices.length >= 3000) break; // Limit vertices
                                             }
-                                            
-                                            // Read faces (3 integers: vertex indices) as per instructions.txt
-                                            for (let i = 0; i < numFaces && currentOffset + 12 <= buffer.byteLength; i++) {
-                                                const a = dataView.getUint32(currentOffset, true);
-                                                const b = dataView.getUint32(currentOffset + 4, true);
-                                                const c = dataView.getUint32(currentOffset + 8, true);
-                                                
-                                                // Validate indices
-                                                if (a < numVertices && b < numVertices && c < numVertices) {
-                                                    faces.push(a, b, c);
-                                                }
-                                                currentOffset += 12;
-                                            }
-                                            
-                                            // Try to read additional data (normals, UVs)
-                                            if (currentOffset + numVertices * 12 <= buffer.byteLength) {
-                                                // Read normals
-                                                for (let i = 0; i < numVertices; i++) {
-                                                    const nx = dataView.getFloat32(currentOffset, true);
-                                                    const ny = dataView.getFloat32(currentOffset + 4, true);
-                                                    const nz = dataView.getFloat32(currentOffset + 8, true);
-                                                    
-                                                    if (!isNaN(nx) && !isNaN(ny) && !isNaN(nz)) {
-                                                        normals.push(nx, ny, nz);
-                                                    }
-                                                    currentOffset += 12;
-                                                }
-                                            }
-                                            
-                                            if (currentOffset + numVertices * 8 <= buffer.byteLength) {
-                                                // Read UVs
-                                                for (let i = 0; i < numVertices; i++) {
-                                                    const u = dataView.getFloat32(currentOffset, true);
-                                                    const v = dataView.getFloat32(currentOffset + 4, true);
-                                                    
-                                                    if (!isNaN(u) && !isNaN(v)) {
-                                                        uvs.push(u, v);
-                                                    }
-                                                    currentOffset += 8;
-                                                }
-                                            }
-                                            
-                                            console.log(`Structured parsing successful: ${vertices.length/3} vertices, ${faces.length/3} faces`);
-                                            
-                                            return {
-                                                vertices,
-                                                indices: faces,
-                                                normals: normals.length > 0 ? normals : undefined,
-                                                uvs: uvs.length > 0 ? uvs : undefined,
-                                                success: true
-                                            };
                                         }
                                     }
-                                } catch (error) {
-                                    console.log('Structured parsing failed:', error.message);
-                                }
-                                
-                                return { success: false };
-                            };
-                            
-                            // Try structured parsing first
-                            let result = parseStructuredData();
-                            
-                            // If structured parsing failed, try pattern-based approach
-                            if (!result.success) {
-                                console.log('Attempting pattern-based parsing...');
-                                
-                                const vertices = [];
-                                const indices = [];
-                                
-                                // Scan for vertex data patterns
-                                for (let i = 32; i < buffer.byteLength - 12; i += 4) {
-                                    const x = dataView.getFloat32(i, true);
-                                    const y = dataView.getFloat32(i + 4, true);
-                                    const z = dataView.getFloat32(i + 8, true);
                                     
-                                    // Look for reasonable vertex coordinates
-                                    if (!isNaN(x) && !isNaN(y) && !isNaN(z) && 
-                                        Math.abs(x) < 1000 && Math.abs(y) < 1000 && Math.abs(z) < 1000 &&
-                                        (Math.abs(x) > 0.001 || Math.abs(y) > 0.001 || Math.abs(z) > 0.001)) {
-                                        vertices.push(x, y, z);
-                                        
-                                        // Limit vertices to prevent performance issues
-                                        if (vertices.length >= 3000) break;
-                                    }
-                                }
-                                
-                                // Generate triangulated indices if we found vertices
-                                if (vertices.length >= 9) { // At least 3 vertices
+                                    // Generate simple indices - create triangle strip
                                     const numVerts = vertices.length / 3;
-                                    for (let i = 0; i < numVerts - 2; i += 3) {
-                                        if (i + 2 < numVerts) {
-                                            indices.push(i, i + 1, i + 2);
+                                    if (numVerts >= 3) {
+                                        // Create a simple triangle mesh
+                                        for (let i = 0; i < numVerts - 2; i += 3) {
+                                            if (i + 2 < numVerts) {
+                                                indices.push(i, i + 1, i + 2);
+                                            }
                                         }
+                                    }
+                                    
+                                    console.log(`Estimated ${vertices.length/3} vertices from MOB file`);
+                                    
+                                    resolve({
+                                        type: 'model',
+                                        vertices: vertices,
+                                        indices: indices,
+                                        uvs: uvs.length > 0 ? uvs : undefined,
+                                        normals: normals.length > 0 ? normals : undefined,
+                                        animations: [],
+                                        materials: [],
+                                        thumbnail: createThumbnail(),
+                                        metadata: {
+                                            format: 'MOB',
+                                            version: 1.0,
+                                            vertexCount: vertices.length / 3,
+                                            triangleCount: indices.length / 3,
+                                            description: 'Matrix Online Binary model',
+                                            parsedBy: 'Binary estimation algorithm'
+                                        }
+                                    });
+                                    return;
+                                }
+                            }
+                            
+                            // If we got here, either counts were valid or estimation failed
+                            // Try to read vertices directly
+                            const vertices = [];
+                            const indices = [];
+                            const uvs = [];
+                            
+                            if (isValidCount) {
+                                // Read vertices
+                                for (let i = 0; i < vertexCount; i++) {
+                                    if (offset + 12 <= buffer.byteLength) {
+                                        vertices.push(
+                                            dataView.getFloat32(offset, true),
+                                            dataView.getFloat32(offset + 4, true),
+                                            dataView.getFloat32(offset + 8, true)
+                                        );
+                                        offset += 12;
                                     }
                                 }
                                 
-                                result = {
-                                    vertices,
-                                    indices,
-                                    normals: undefined,
-                                    uvs: undefined,
-                                    success: vertices.length > 0
-                                };
+                                // Read indices
+                                for (let i = 0; i < indexCount; i++) {
+                                    if (offset + 2 <= buffer.byteLength) {
+                                        indices.push(dataView.getUint16(offset, true));
+                                        offset += 2;
+                                    }
+                                }
                                 
-                                console.log(`Pattern-based parsing: ${vertices.length/3} vertices found`);
+                                // Try to read UVs if they exist (common in MOB files)
+                                if (offset + vertexCount * 8 <= buffer.byteLength) {
+                                    for (let i = 0; i < vertexCount; i++) {
+                                        uvs.push(
+                                            dataView.getFloat32(offset, true),
+                                            dataView.getFloat32(offset + 4, true)
+                                        );
+                                        offset += 8;
+                                    }
+                                }
+                                
+                                console.log(`Successfully parsed ${vertices.length/3} vertices from MOB file`);
+                                
+                                resolve({
+                                    type: 'model',
+                                    vertices: vertices,
+                                    indices: indices,
+                                    uvs: uvs.length > 0 ? uvs : undefined,
+                                    normals: [],
+                                    animations: [],
+                                    materials: [],
+                                    thumbnail: createThumbnail(),
+                                    metadata: {
+                                        format: 'MOB',
+                                        version: 1.0,
+                                        vertexCount: vertices.length / 3,
+                                        triangleCount: indices.length / 3,
+                                        description: 'Matrix Online Binary model'
+                                    }
+                                });
+                                return;
                             }
                             
-                            // Create final result
-                            if (result.success && result.vertices.length > 0) {
-                                resolve({
-                                    type: 'model',
-                                    vertices: result.vertices,
-                                    indices: result.indices,
-                                    normals: result.normals,
-                                    uvs: result.uvs,
-                                    animations: [],
-                                    materials: [],
-                                    thumbnail: createThumbnail(),
-                                    metadata: {
-                                        format: file.name.toLowerCase().endsWith('.moa') ? 'MOA' : 
-                                               file.name.toLowerCase().endsWith('.prop') ? 'PROP' : 
-                                               file.name.toLowerCase().endsWith('.iprf') ? 'IPRF' : 
-                                               file.name.toLowerCase().endsWith('.eprf') ? 'EPRF' : 'MXO',
-                                        version: 1.0,
-                                        signature: headerInfo.signature,
-                                        vertexCount: result.vertices.length / 3,
-                                        triangleCount: result.indices.length / 3,
-                                        description: file.name.toLowerCase().endsWith('.moa') ? 'Character model/clothing/vehicle' : 
-                                                    file.name.toLowerCase().endsWith('.prop') ? 'Static prop/object' : 
-                                                    'Matrix Online model',
-                                        parsedBy: 'Enhanced MXO parser v3.0',
-                                        fileSize: buffer.byteLength,
-                                        hasNormals: !!result.normals,
-                                        hasUVs: !!result.uvs,
-                                        engine: 'Modified Lithtech Discovery',
-                                        scale: '1 unit = 1 centimeter'
-                                    }
-                                });
-                            } else {
-                                // Create a fallback simple model
-                                const fallbackVertices = [
-                                    -1, -1, 0,   // Bottom left
-                                     1, -1, 0,   // Bottom right
-                                     0,  1, 0,   // Top
-                                    -0.5, 0, 1,  // Back left
-                                     0.5, 0, 1   // Back right
-                                ];
-                                
-                                const fallbackIndices = [
-                                    0, 1, 2,  // Front triangle
-                                    0, 3, 4,  // Back left triangle
-                                    1, 4, 2,  // Back right triangle
-                                    3, 4, 2   // Back top triangle
-                                ];
-                                
-                                console.log('Using fallback model for MOB file');
-                                
-                                resolve({
-                                    type: 'model',
-                                    vertices: fallbackVertices,
-                                    indices: fallbackIndices,
-                                    normals: undefined,
-                                    uvs: undefined,
-                                    animations: [],
-                                    materials: [],
-                                    thumbnail: createThumbnail(),
-                                    metadata: {
-                                        format: file.name.toLowerCase().endsWith('.moa') ? 'MOA' : 
-                                               file.name.toLowerCase().endsWith('.prop') ? 'PROP' : 
-                                               file.name.toLowerCase().endsWith('.iprf') ? 'IPRF' : 
-                                               file.name.toLowerCase().endsWith('.eprf') ? 'EPRF' : 'MXO',
-                                        version: 1.0,
-                                        signature: headerInfo.signature,
-                                        vertexCount: 5,
-                                        triangleCount: 4,
-                                        description: file.name.toLowerCase().endsWith('.moa') ? 'Character model (placeholder)' : 
-                                                    file.name.toLowerCase().endsWith('.prop') ? 'Static prop (placeholder)' : 
-                                                    'Matrix Online model (placeholder)',
-                                        parsedBy: 'Enhanced MXO parser v3.0 (fallback)',
-                                        fileSize: buffer.byteLength,
-                                        warning: 'Could not parse actual model data, using placeholder',
-                                        engine: 'Modified Lithtech Discovery',
-                                        scale: '1 unit = 1 centimeter'
-                                    }
-                                });
-                            }
+                            // Fallback if both methods failed
+                            console.warn('MOB parsing failed. Returning analyzed placeholder');
+                            resolve({
+                                type: 'model',
+                                vertices: [
+                                    // Create based on data from file for uniqueness
+                                    dataView.getFloat32(40, true) || -1, dataView.getFloat32(44, true) || -1, dataView.getFloat32(48, true) || -1,
+                                    dataView.getFloat32(52, true) || 1, dataView.getFloat32(56, true) || -1, dataView.getFloat32(60, true) || -1,
+                                    dataView.getFloat32(64, true) || 1, dataView.getFloat32(68, true) || -1, dataView.getFloat32(72, true) || 1,
+                                    dataView.getFloat32(76, true) || -1, dataView.getFloat32(80, true) || -1, dataView.getFloat32(84, true) || 1,
+                                    dataView.getFloat32(88, true) || 0, dataView.getFloat32(92, true) || 1, dataView.getFloat32(96, true) || 0
+                                ],
+                                indices: [0, 2, 1, 0, 3, 2, 0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4],
+                                uvs: [0, 0, 1, 0, 1, 1, 0, 1, 0.5, 0.5],
+                                normals: [],
+                                animations: [],
+                                materials: [],
+                                thumbnail: createThumbnail(),
+                                metadata: {
+                                    format: 'MOB',
+                                    version: 1.0,
+                                    vertexCount: 5,
+                                    triangleCount: 6,
+                                    description: 'Matrix Online Binary model',
+                                    fileSize: buffer.byteLength,
+                                    headerBytes: Array.from(header).map(b => b.toString(16).padStart(2, '0')).join(' ')
+                                }
+                            });
                         } catch (error) {
-                            console.error('Error parsing MXO model file:', error);
+                            console.error('Error parsing MOB file:', error);
                             reject(error);
                         }
                     };
@@ -1743,39 +1588,18 @@
                 // Store camera reference globally for access by other components
                 window.sceneCamera = camera;
                 
-                // Enhanced renderer setup based on instructions.txt
-                const renderer = new THREE.WebGLRenderer({ 
-                    antialias: true,
-                    alpha: true,
-                    preserveDrawingBuffer: true
-                });
+                const renderer = new THREE.WebGLRenderer({ antialias: true });
                 
                 renderer.setSize(width, height);
                 renderer.setClearColor(0x001a00, 1);
-                renderer.shadowMap.enabled = true;
-                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-                renderer.outputColorSpace = THREE.SRGBColorSpace;
-                renderer.toneMapping = THREE.ACESFilmicToneMapping;
-                renderer.toneMappingExposure = 1.0;
-                
-                // Error handling for WebGL context
-                renderer.domElement.addEventListener('webglcontextlost', (event) => {
-                    event.preventDefault();
-                    console.warn('WebGL context lost');
-                });
-                
-                renderer.domElement.addEventListener('webglcontextrestored', () => {
-                    console.log('WebGL context restored');
-                });
-                
                 containerRef.current.appendChild(renderer.domElement);
                 rendererRef.current = renderer;
                 
                 // Add controls
-                // Make sure THREE.OrbitControls is available
-                if (window.THREE && window.THREE.OrbitControls) {
+                // Make sure OrbitControls is available
+                if (window.THREE && OrbitControls) {
                     console.log('Initializing OrbitControls');
-                    const controls = new window.THREE.OrbitControls(camera, renderer.domElement);
+                    const controls = new OrbitControls(camera, renderer.domElement);
                     controls.enableDamping = true;
                     controls.dampingFactor = 0.25;
                     
@@ -1886,7 +1710,7 @@
                     controls.keyStates = keyStates;
                     console.log('Stored keyStates on controls:', controls.keyStates);
                 } else {
-                    console.warn("THREE.OrbitControls is not available. Using manual mouse controls.");
+                    console.warn("OrbitControls is not available. Using manual mouse controls.");
                     
                     // Manual mouse rotation implementation
                     let mouseDown = false;
@@ -1964,26 +1788,13 @@
                     };
                 }
                 
-                // Enhanced lighting setup based on instructions.txt
-                const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+                // Add lighting
+                const ambientLight = new THREE.AmbientLight(0x404040);
                 scene.add(ambientLight);
                 
-                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
                 directionalLight.position.set(1, 1, 1);
-                directionalLight.castShadow = true;
-                directionalLight.shadow.mapSize.width = 1024;
-                directionalLight.shadow.mapSize.height = 1024;
                 scene.add(directionalLight);
-                
-                // Add additional point light for better illumination
-                const pointLight = new THREE.PointLight(0x00ff00, 0.3, 100);
-                pointLight.position.set(-5, 5, 5);
-                scene.add(pointLight);
-                
-                // Add fill light
-                const fillLight = new THREE.DirectionalLight(0x004400, 0.3);
-                fillLight.position.set(-1, -1, -1);
-                scene.add(fillLight);
                 
                 // Add axes helper
                 const axesHelper = new THREE.AxesHelper(5);
@@ -2040,22 +1851,12 @@
                         geometry.setIndex(data.indices);
                     }
                     
-                    // Enhanced material based on instructions.txt
+                    // Create material
                     const material = new THREE.MeshPhongMaterial({ 
                         color: 0x00ff00,
-                        wireframe: renderMode === 'wireframe',
-                        side: THREE.DoubleSide,
-                        shininess: 30,
-                        specular: 0x222222,
-                        transparent: false,
-                        opacity: 1.0
+                        wireframe: false,
+                        side: THREE.DoubleSide
                     });
-                    
-                    // Apply texture if available in MOB data
-                    if (data.texture) {
-                        const textureLoader = new THREE.TextureLoader();
-                        material.map = textureLoader.load(data.texture);
-                    }
                     
                     // Create mesh
                     const mesh = new THREE.Mesh(geometry, material);
@@ -2517,43 +2318,10 @@
                                     {showAxes ? 'Hide Axes' : 'Show Axes'}
                                 </button>
                                 <button 
-                                    className="matrix-button mb-2 text-xs w-full"
+                                    className="matrix-button text-xs w-full"
                                     onClick={toggleAnimation}
                                 >
                                     {animationPlaying ? 'Pause' : 'Animate'}
-                                </button>
-                                <button 
-                                    className="matrix-button mb-2 text-xs w-full"
-                                    onClick={() => {
-                                        if (scene) {
-                                            const lights = scene.children.filter(child => child.isLight);
-                                            lights.forEach(light => {
-                                                light.visible = !light.visible;
-                                            });
-                                        }
-                                    }}
-                                >
-                                    Toggle Lights
-                                </button>
-                                <button 
-                                    className="matrix-button text-xs w-full"
-                                    onClick={() => {
-                                        // Export model to .obj format
-                                        if (modelRef.current) {
-                                            const objData = exportToOBJ(modelRef.current);
-                                            const blob = new Blob([objData], { type: 'text/plain' });
-                                            const url = URL.createObjectURL(blob);
-                                            const link = document.createElement('a');
-                                            link.href = url;
-                                            link.download = file.name.replace(/\.[^/.]+$/, '') + '.obj';
-                                            document.body.appendChild(link);
-                                            link.click();
-                                            document.body.removeChild(link);
-                                            URL.revokeObjectURL(url);
-                                        }
-                                    }}
-                                >
-                                    Export OBJ
                                 </button>
                             </div>
                             
@@ -2689,50 +2457,22 @@
                                 <div className="bg-black bg-opacity-20 p-4 rounded">
                                     <h5 className="text-sm font-bold mb-2">Animation</h5>
                                     <p className="text-xs"><strong>Animations:</strong> {modelStats.animations}</p>
-                                    <p className="text-xs"><strong>Format:</strong> {
-                                        file.name.toLowerCase().endsWith('.abc') ? 'Lithtech ABC' : 
-                                        file.name.toLowerCase().endsWith('.moa') ? 'MOA - Character/Clothing/Vehicle' :
-                                        file.name.toLowerCase().endsWith('.prop') ? 'PROP - Static Object' :
-                                        file.name.toLowerCase().endsWith('.iprf') ? 'IPRF - Specialized Data' :
-                                        file.name.toLowerCase().endsWith('.eprf') ? 'EPRF - Specialized Data' :
-                                        file.name.toLowerCase().endsWith('.mga') ? 'MGA - Model Group' :
-                                        file.name.toLowerCase().endsWith('.mgc') ? 'MGC - Model Collection' :
-                                        'Matrix Online Model'
-                                    }</p>
+                                    <p className="text-xs"><strong>Format:</strong> {file.name.endsWith('.abc') ? 'Lithtech ABC' : 'Matrix Online MOB'}</p>
                                 </div>
                             </div>
                             
                             <h4 className="text-sm font-bold mb-2">Matrix Online Model Format</h4>
                             <p className="text-xs mb-4">
-                                {file.name.toLowerCase().endsWith('.abc') ? (
+                                {file.name.endsWith('.abc') ? (
                                     <>
                                         ABC (Actor Binary Cache) files store 3D models used in The Matrix Online. 
                                         They contain meshes, skeletons, animations, and material definitions.
-                                        These files are optimized for the Lithtech engine.
-                                    </>
-                                ) : file.name.toLowerCase().endsWith('.moa') ? (
-                                    <>
-                                        MOA files contain character models, clothing, and vehicles with multiple LOD levels.
-                                        These are index files that reference other assets. Essential for animated characters
-                                        as they include bone weights and skeletal data.
-                                    </>
-                                ) : file.name.toLowerCase().endsWith('.prop') ? (
-                                    <>
-                                        PROP files contain static props and objects in the game world.
-                                        These are simpler than character models and don't require bone weight data.
-                                        Ideal for environmental objects and decorations.
-                                    </>
-                                ) : file.name.toLowerCase().endsWith('.mga') || file.name.toLowerCase().endsWith('.mgc') ? (
-                                    <>
-                                        Model Group/Collection files organize multiple models together.
-                                        These files reference other model assets and are used for complex objects
-                                        that consist of multiple parts.
+                                        These files are optimized for the Lithtech Jupiter engine.
                                     </>
                                 ) : (
                                     <>
-                                        Matrix Online uses a modified Lithtech Discovery engine with unique file formats.
-                                        Scale: 1 unit = 1 centimeter. Models include UV coordinates, normals, and 
-                                        bone weights (for animated models).
+                                        MOB (Matrix Online Binary) files are specialized model files for The Matrix Online.
+                                        They contain character models, equipment, and props used in the game world.
                                     </>
                                 )}
                             </p>
@@ -2965,7 +2705,7 @@
                 containerRef.current.appendChild(renderer.domElement);
                 
                 // Add controls
-                const controls = new THREE.OrbitControls(camera, renderer.domElement);
+                const controls = new OrbitControls(camera, renderer.domElement);
                 
                 // Add lighting
                 const ambientLight = new THREE.AmbientLight(0x404040);
@@ -3038,7 +2778,22 @@
             useEffect(() => {
                 if (!containerRef.current) return;
                 
-                // Initialize Monaco Editor
+                // Wait for THREE.js to load before initializing
+        waitForThreeJS().then(() => {
+            console.log('THREE.js modules ready, initializing application');
+            
+            // Hide loading screen
+            setTimeout(() => {
+                clearInterval(matrixInterval);
+                document.getElementById('loading').style.display = 'none';
+            }, 1000);
+            
+            // Initialize the React app
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+        });
+        
+        // Initialize Monaco Editor
                 require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs' }});
                 require(['vs/editor/editor.main'], () => {
                     if (editorRef.current) {
@@ -4689,54 +4444,45 @@
             const [categoryFilter, setCategoryFilter] = useState('all');
             const [isAnalyzing, setIsAnalyzing] = useState(false);
             
+            // Get log files from already loaded files
+            const logFiles = React.useMemo(() => {
+                if (!allFiles) return [];
+                
+                return Object.entries(allFiles)
+                    .filter(([path, fileInfo]) => {
+                        const ext = '.' + path.split('.').pop().toLowerCase();
+                        return FILE_TYPES.LOG.extensions.includes(ext) || 
+                               path.toLowerCase().includes('log') ||
+                               path.toLowerCase().includes('debug') ||
+                               path.toLowerCase().includes('server') ||
+                               path.toLowerCase().includes('client');
+                    })
+                    .map(([path, fileInfo]) => ({
+                        path,
+                        file: fileInfo.file,
+                        name: path.split('/').pop(),
+                        size: fileInfo.file.size,
+                        category: categorizeLogFile(path),
+                        tags: generateFileTags(path)
+                    }));
+            }, [allFiles]);
+            
             // Categorize log files based on their name/path
-            const categorizeLogFile = React.useCallback((path) => {
+            const categorizeLogFile = (path) => {
                 const fileName = path.toLowerCase();
-                
-                // Combat-related files
-                if (fileName.includes('combat') || fileName.includes('interlock') || 
-                    fileName.includes('damage') || fileName.includes('attack') ||
-                    fileName.includes('defense') || fileName.includes('accuracy') ||
-                    fileName.includes('pvp') || fileName.includes('duel') ||
-                    fileName.includes('ability') || fileName.includes('skill')) return 'combat';
-                
-                // GameObject and NPC files
-                if (fileName.includes('gameobject') || fileName.includes('object') ||
-                    fileName.includes('spawn') || fileName.includes('npc')) return 'gameobject';
-                
-                // Animation and effects
-                if (fileName.includes('animation') || fileName.includes('anim') ||
-                    fileName.includes('effect') || fileName.includes('fx')) return 'animation';
-                
-                // Network and protocol
-                if (fileName.includes('network') || fileName.includes('packet') ||
-                    fileName.includes('protocol') || fileName.includes('rpc')) return 'network';
-                
-                // Mission and quest files
-                if (fileName.includes('mission') || fileName.includes('quest')) return 'mission';
-                
-                // Server files
                 if (fileName.includes('server')) return 'server';
-                
-                // Client files
                 if (fileName.includes('client')) return 'client';
-                
-                // Authentication
+                if (fileName.includes('combat')) return 'combat';
+                if (fileName.includes('network') || fileName.includes('packet')) return 'network';
                 if (fileName.includes('auth')) return 'auth';
-                
-                // Debug and error logs
                 if (fileName.includes('debug')) return 'debug';
                 if (fileName.includes('error')) return 'error';
-                
-                // Config files
-                if (path.endsWith('.xml') || path.endsWith('.cfg') || 
-                    path.endsWith('.ini') || path.endsWith('.json')) return 'config';
-                
+                if (fileName.includes('gameobject') || fileName.includes('object')) return 'gameobject';
                 return 'general';
-            }, []);
+            };
             
             // Generate tags for files based on content patterns
-            const generateFileTags = React.useCallback((path) => {
+            const generateFileTags = (path) => {
                 const tags = [];
                 const fileName = path.toLowerCase();
                 
@@ -4760,68 +4506,14 @@
                 if (dateMatch) tags.push('dated');
                 
                 return tags;
-            }, []);
-            
-            // Get log files from already loaded files
-            const logFiles = React.useMemo(() => {
-                if (!allFiles) return [];
-                
-                return Object.entries(allFiles)
-                    .filter(([path, fileInfo]) => {
-                        const ext = '.' + path.split('.').pop().toLowerCase();
-                        const fileName = path.toLowerCase();
-                        
-                        // Include various combat and game-related file types
-                        return FILE_TYPES.LOG.extensions.includes(ext) || 
-                               fileName.includes('log') ||
-                               fileName.includes('debug') ||
-                               fileName.includes('server') ||
-                               fileName.includes('client') ||
-                               fileName.includes('combat') ||
-                               fileName.includes('interlock') ||
-                               fileName.includes('damage') ||
-                               fileName.includes('ability') ||
-                               fileName.includes('skill') ||
-                               fileName.includes('attack') ||
-                               fileName.includes('defense') ||
-                               fileName.includes('accuracy') ||
-                               fileName.includes('pvp') ||
-                               fileName.includes('duel') ||
-                               fileName.includes('mission') ||
-                               fileName.includes('gameobject') ||
-                               fileName.includes('rpc') ||
-                               fileName.includes('packet') ||
-                               fileName.includes('protocol') ||
-                               fileName.includes('spawn') ||
-                               fileName.includes('npc') ||
-                               fileName.includes('animation') ||
-                               fileName.includes('effect') ||
-                               fileName.includes('trace') ||
-                               // Also include XML files that might contain combat data
-                               ext === '.xml' ||
-                               ext === '.json' ||
-                               ext === '.csv' ||
-                               ext === '.dat' ||
-                               ext === '.cfg' ||
-                               ext === '.ini';
-                    })
-                    .map(([path, fileInfo]) => ({
-                        path,
-                        file: fileInfo.file,
-                        name: path.split('/').pop(),
-                        size: fileInfo.file.size,
-                        category: categorizeLogFile(path),
-                        tags: generateFileTags(path)
-                    }));
-            }, [allFiles, categorizeLogFile, generateFileTags]);
+            };
             
             // Log analysis patterns based on the Matrix Online technical documentation
             const analyzeLogFile = async (file) => {
                 try {
                     const text = await file.text();
-                    const fileName = file.name.toLowerCase();
+                    const lines = text.split('\n');
                     
-                    // Initialize analysis structure
                     const analysis = {
                         gameObjects: [],
                         combatMessages: [],
@@ -4829,107 +4521,16 @@
                         packetData: [],
                         animationIds: [],
                         statistics: {
-                            totalLines: 0,
+                            totalLines: lines.length,
                             gameObjectCount: 0,
                             combatEventCount: 0,
                             rpcCallCount: 0,
-                            packetCount: 0,
-                            fileType: fileName.endsWith('.xml') ? 'XML' : 
-                                     fileName.endsWith('.json') ? 'JSON' : 
-                                     fileName.endsWith('.csv') ? 'CSV' : 'TEXT'
+                            packetCount: 0
                         }
                     };
                     
-                    // Handle different file types
-                    if (fileName.endsWith('.xml')) {
-                        // Parse XML files for combat data
-                        const parser = new DOMParser();
-                        const xmlDoc = parser.parseFromString(text, "text/xml");
-                        
-                        // Look for combat-related XML elements
-                        const combatElements = xmlDoc.querySelectorAll('combat, ability, skill, attack, damage, defense, interlock');
-                        combatElements.forEach(elem => {
-                            analysis.combatMessages.push({
-                                line: 0,
-                                content: elem.outerHTML,
-                                type: elem.tagName.toLowerCase(),
-                                timestamp: elem.getAttribute('timestamp') || null,
-                                attributes: Array.from(elem.attributes).reduce((acc, attr) => {
-                                    acc[attr.name] = attr.value;
-                                    return acc;
-                                }, {})
-                            });
-                            analysis.statistics.combatEventCount++;
-                        });
-                        
-                        // Look for GameObject elements
-                        const gameObjectElements = xmlDoc.querySelectorAll('gameobject, object, entity, npc, spawn');
-                        gameObjectElements.forEach(elem => {
-                            analysis.gameObjects.push({
-                                line: 0,
-                                content: elem.outerHTML,
-                                objectId: elem.getAttribute('id') || elem.getAttribute('objectId') || 'unknown',
-                                timestamp: elem.getAttribute('timestamp') || null
-                            });
-                            analysis.statistics.gameObjectCount++;
-                        });
-                        
-                        analysis.statistics.totalLines = combatElements.length + gameObjectElements.length;
-                        
-                    } else if (fileName.endsWith('.json')) {
-                        // Parse JSON files for combat data
-                        try {
-                            const jsonData = JSON.parse(text);
-                            
-                            // Recursive function to find combat-related data
-                            const findCombatData = (obj, path = '') => {
-                                if (Array.isArray(obj)) {
-                                    obj.forEach((item, index) => findCombatData(item, `${path}[${index}]`));
-                                } else if (typeof obj === 'object' && obj !== null) {
-                                    Object.keys(obj).forEach(key => {
-                                        const keyLower = key.toLowerCase();
-                                        if (keyLower.includes('combat') || keyLower.includes('damage') || 
-                                            keyLower.includes('attack') || keyLower.includes('defense') ||
-                                            keyLower.includes('ability') || keyLower.includes('skill')) {
-                                            analysis.combatMessages.push({
-                                                line: 0,
-                                                content: JSON.stringify({[key]: obj[key]}),
-                                                type: keyLower,
-                                                timestamp: obj.timestamp || null,
-                                                path: `${path}.${key}`
-                                            });
-                                            analysis.statistics.combatEventCount++;
-                                        }
-                                        if (keyLower.includes('gameobject') || keyLower.includes('object') ||
-                                            keyLower.includes('npc') || keyLower.includes('spawn')) {
-                                            analysis.gameObjects.push({
-                                                line: 0,
-                                                content: JSON.stringify({[key]: obj[key]}),
-                                                objectId: obj.id || obj.objectId || 'unknown',
-                                                timestamp: obj.timestamp || null
-                                            });
-                                            analysis.statistics.gameObjectCount++;
-                                        }
-                                        findCombatData(obj[key], `${path}.${key}`);
-                                    });
-                                }
-                            };
-                            
-                            findCombatData(jsonData);
-                            analysis.statistics.totalLines = JSON.stringify(jsonData, null, 2).split('\n').length;
-                            
-                        } catch (e) {
-                            console.error('Error parsing JSON:', e);
-                            // Fall back to text parsing
-                        }
-                        
-                    } else {
-                        // Parse text/log files line by line
-                        const lines = text.split('\n');
-                        analysis.statistics.totalLines = lines.length;
-                        
-                        lines.forEach((line, index) => {
-                            const lineNumber = index + 1;
+                    lines.forEach((line, index) => {
+                        const lineNumber = index + 1;
                         
                         // Detect GameObject creation/distribution (based on CreateGoObjAndDistrObjView function)
                         if (line.match(/CreateGoObjAndDistrObjView|GameObject|0xCA7/i)) {
@@ -4943,14 +4544,13 @@
                             analysis.statistics.gameObjectCount++;
                         }
                         
-                        // Detect combat-related messages (expanded patterns for MXO)
-                        if (line.match(/damage|accuracy|defense|combat|interlock|d100|roll|pvp|duel|melee|ranged|viral|hack|block|evade|critical|resistance|buff|debuff|dot|heal|stun|root|mezz|taunt|aggro|threat|style|combo|finisher|powerless|disarm|pacify|confuse|blind|slow/i)) {
+                        // Detect combat-related messages (damage, accuracy, defense)
+                        if (line.match(/damage|accuracy|defense|combat|interlock|d100|roll/i)) {
                             analysis.combatMessages.push({
                                 line: lineNumber,
                                 content: line.trim(),
                                 type: getCombatType(line),
-                                timestamp: extractTimestamp(line),
-                                values: extractCombatValues(line)
+                                timestamp: extractTimestamp(line)
                             });
                             analysis.statistics.combatEventCount++;
                         }
@@ -4990,8 +4590,7 @@
                                 });
                             }
                         }
-                        });
-                    }
+                    });
                     
                     return analysis;
                 } catch (error) {
@@ -5007,88 +4606,12 @@
             };
             
             const getCombatType = (line) => {
-                const lineLower = line.toLowerCase();
-                
-                // Damage types
-                if (lineLower.includes('damage')) return 'damage';
-                if (lineLower.includes('critical')) return 'critical';
-                if (lineLower.includes('dot')) return 'damage_over_time';
-                
-                // Attack types
-                if (lineLower.includes('melee')) return 'melee';
-                if (lineLower.includes('ranged')) return 'ranged';
-                if (lineLower.includes('viral')) return 'viral';
-                if (lineLower.includes('hack')) return 'hack';
-                
-                // Defense types
-                if (lineLower.includes('defense') || lineLower.includes('dodge')) return 'defense';
-                if (lineLower.includes('block')) return 'block';
-                if (lineLower.includes('evade')) return 'evade';
-                if (lineLower.includes('resistance')) return 'resistance';
-                
-                // Accuracy and rolls
-                if (lineLower.includes('accuracy') || lineLower.includes('hit')) return 'accuracy';
-                if (lineLower.includes('d100') || lineLower.includes('roll')) return 'dice_roll';
-                
-                // Combat states
-                if (lineLower.includes('interlock')) return 'interlock';
-                if (lineLower.includes('pvp')) return 'pvp';
-                if (lineLower.includes('duel')) return 'duel';
-                
-                // Buffs and debuffs
-                if (lineLower.includes('buff')) return 'buff';
-                if (lineLower.includes('debuff')) return 'debuff';
-                if (lineLower.includes('heal')) return 'heal';
-                
-                // Crowd control
-                if (lineLower.includes('stun')) return 'stun';
-                if (lineLower.includes('root')) return 'root';
-                if (lineLower.includes('mezz')) return 'mezz';
-                if (lineLower.includes('slow')) return 'slow';
-                if (lineLower.includes('confuse')) return 'confuse';
-                if (lineLower.includes('blind')) return 'blind';
-                if (lineLower.includes('powerless')) return 'powerless';
-                if (lineLower.includes('disarm')) return 'disarm';
-                if (lineLower.includes('pacify')) return 'pacify';
-                
-                // Threat management
-                if (lineLower.includes('taunt')) return 'taunt';
-                if (lineLower.includes('aggro') || lineLower.includes('threat')) return 'threat';
-                
-                // Combat styles
-                if (lineLower.includes('style')) return 'style';
-                if (lineLower.includes('combo')) return 'combo';
-                if (lineLower.includes('finisher')) return 'finisher';
-                
+                if (line.match(/damage/i)) return 'damage';
+                if (line.match(/accuracy|hit/i)) return 'accuracy';
+                if (line.match(/defense|dodge|block/i)) return 'defense';
+                if (line.match(/d100|roll/i)) return 'dice_roll';
+                if (line.match(/interlock/i)) return 'interlock';
                 return 'general';
-            };
-            
-            // Extract numeric values from combat messages
-            const extractCombatValues = (line) => {
-                const values = {};
-                
-                // Extract damage numbers
-                const damageMatch = line.match(/(\d+)\s*damage/i);
-                if (damageMatch) values.damage = parseInt(damageMatch[1]);
-                
-                // Extract percentages
-                const percentMatch = line.match(/(\d+)%/);
-                if (percentMatch) values.percentage = parseInt(percentMatch[1]);
-                
-                // Extract dice rolls
-                const rollMatch = line.match(/\bd(\d+)\s*[:=]\s*(\d+)/i);
-                if (rollMatch) {
-                    values.diceType = `d${rollMatch[1]}`;
-                    values.rollResult = parseInt(rollMatch[2]);
-                }
-                
-                // Extract any other numbers
-                const numbers = line.match(/\b\d+\b/g);
-                if (numbers && numbers.length > 0) {
-                    values.numbers = numbers.map(n => parseInt(n));
-                }
-                
-                return Object.keys(values).length > 0 ? values : null;
             };
             
             const getProtocolType = (line) => {
@@ -5198,10 +4721,7 @@
             
             return (
                 <div className="p-4" style={{ height: 'calc(100vh - 100px)', overflowY: 'auto' }}>
-                    <h3 className="matrix-title mb-4">GameObject & Combat Analyzer - Enhanced for Matrix Online</h3>
-                    <p className="text-xs mb-4 opacity-70">
-                        Analyzes combat logs, XML configs, JSON data, and various MXO-specific file formats
-                    </p>
+                    <h3 className="matrix-title mb-4">GameObject & Combat Log Analyzer</h3>
                     
                     {/* File Summary */}
                     <div className="mb-4 p-4 border border-green-500 rounded">
@@ -5214,14 +4734,8 @@
                         
                         {logFiles.length === 0 && (
                             <div className="text-center p-4 opacity-70">
-                                <p>No combat-related files found in loaded directory</p>
-                                <p className="text-xs mt-2">Load a directory containing:</p>
-                                <ul className="text-xs mt-2">
-                                    <li>• Log files (.log, .txt, .out)</li>
-                                    <li>• Combat configs (.xml, .json, .cfg)</li>
-                                    <li>• Data files (.dat, .csv)</li>
-                                    <li>• Files with combat keywords in name</li>
-                                </ul>
+                                <p>No log files found in loaded directory</p>
+                                <p className="text-xs mt-2">Load a directory containing .log, .txt, .out, or debug files</p>
                             </div>
                         )}
                     </div>
@@ -5750,8 +5264,8 @@
                             console.log(`Processing 3D model: ${fileName}`);
                             
                             // Use specific parser based on file extension
-                            if (fileExt === '.moa' || fileExt === '.prop' || fileExt === '.iprf' || fileExt === '.eprf') {
-                                parsedData = await LithtechParsers.parseMOA(fileInfo.file);
+                            if (fileExt === '.mob') {
+                                parsedData = await LithtechParsers.parseMOB(fileInfo.file);
                             } else {
                                 parsedData = await LithtechParsers.parseABC(fileInfo.file);
                             }
