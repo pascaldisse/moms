@@ -5405,7 +5405,7 @@
             return analysis;
         };
         
-        const analyzeGobFiles = async () => {
+        const analyzeGobFiles = async (allFiles) => {
             const gobFiles = Object.entries(allFiles).filter(([path]) => 
                 path.toLowerCase().endsWith('.gob')
             );
@@ -5581,7 +5581,7 @@
             
             // Make analyzeGobFiles function available in component scope
             const handleGobAnalysis = () => {
-                analyzeGobFiles();
+                analyzeGobFiles(allFiles);
             };
             const [filterType, setFilterType] = useState('all');
             const [sortBy, setSortBy] = useState('name');
