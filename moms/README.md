@@ -1,207 +1,149 @@
-# Matrix Online Modding Suite (MOMS)
+# MOMS - Matrix Online Modding Suite
 
-A comprehensive web-based tool for viewing, analyzing, and modifying Matrix Online game assets.
+A comprehensive web-based tool for viewing and analyzing The Matrix Online game assets, including 3D models, textures, animations, scripts, and game data.
 
-![Matrix Online](https://img.shields.io/badge/Matrix%20Online-Modding%20Suite-00ff00?style=for-the-badge)
-![Version](https://img.shields.io/badge/Version-3.0-green?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+## Overview
 
-## 🎮 Overview
+MOMS (Matrix Online Modding Suite) is a single-file web application that provides an interactive interface for exploring MXO game files. It features a modern React-based UI with support for viewing 3D models, editing scripts, analyzing combat logs, and playing cutscenes.
 
-MOMS (Matrix Online Modding Suite) is a powerful browser-based application for exploring and modifying Matrix Online game files. It provides tools for viewing 3D models, analyzing combat logs, browsing textures, and much more.
+## Features
 
-## ✨ Features
+- **3D Model Viewer** - View character models (.moa), props (.prop), and model groups (.mga/.mgc)
+- **Texture Viewer** - Support for DTX, DDS, TGA, PNG, JPG formats
+- **Code Editor** - Monaco Editor for LUA, CS, TXT, PY scripts
+- **Archive Browser** - Explore REZ, LTA, LTB, PKB archives
+- **Video Player** - BIK cutscene playback (with FFmpeg conversion)
+- **Combat Analyzer** - Analyze game logs for combat events, RPC calls, and GameObject creation
+- **Enhanced Controls** - WADR movement keys with camera-relative motion
+- **Export Functions** - Export 3D models to OBJ format
 
-### 🗂️ File Support
+## Quick Start
 
-#### 3D Models
-- `.moa` - Character models, clothing, vehicles (with LOD levels)
-- `.prop` - Static props and objects
-- `.iprf/.eprf` - Specialized model data
-- `.mga/.mgc` - Model group/collection files
-- `.abc` - Actor Binary Cache (Lithtech format)
+### 1. Start the Servers
+```bash
+cd /Users/pascaldisse/Downloads/mxo/moms
+./start_servers.sh
+```
 
-#### Other Formats
+This starts:
+- HTTP server on port 8000 (main application)
+- BIK proxy server on port 8002 (video conversion)
+
+### 2. Open in Browser
+Navigate to:
+- **Original Version**: http://localhost:8000/index.html
+- **Modern Version**: http://localhost:8000/index_modern.html (with ES modules)
+
+## File Structure
+
+```
+moms/
+├── index.html              # Main application (copy of index_legacy.html)
+├── index_modern.html       # Modernized version with THREE.js r169
+├── server.py               # Simple HTTP server with CORS (port 8000)
+├── simple-bik-server.py    # BIK to MP4 conversion proxy (port 8002)
+├── api-server.py           # Full API server (optional, not required)
+├── mxo-protocol-parser.js  # MXO packet parsing library
+├── start_servers.sh        # Server startup script
+├── modernize_three.py      # THREE.js modernization script
+├── cache/                  # Directory for converted files
+├── backup/                 # Backup of modular approach attempts
+└── moms-master/            # Original source files
+    ├── index_legacy.html   # Complete single-file MOMS application
+    ├── README.md           # Original documentation
+    └── CLAUDE.md           # Detailed technical documentation
+```
+
+## Technical Details
+
+### Supported File Types
+- **Models**: .moa (characters/clothing/vehicles), .prop (static objects), .iprf/.eprf (specialized data)
+- **Model Groups**: .mga/.mgc (model collections)
 - **Textures**: DTX, DDS, TGA, PNG, JPG
 - **Levels**: DAT, WORLD
 - **Scripts**: LUA, CS, TXT, PY
 - **Archives**: REZ, LTA, LTB, PKB
-- **Videos**: BIK (with FFmpeg conversion)
-- **Logs**: LOG, TXT, OUT, DEBUG
-- **Config**: XML, JSON, CSV, CFG, INI
+- **Videos**: BIK (Bink Video, converted to MP4)
+- **Animations**: ANM, ANI
+- **Logs**: .log, .txt, .out (for combat analysis)
 
-### 🛠️ Core Features
+### Matrix Online Specifics
+- **Engine**: Modified Lithtech Discovery (unique to MXO)
+- **Scale**: 1 unit = 1 centimeter
+- **Model Format**: MXO does NOT use .mob files (common misconception)
+- **Combat System**: D100 roll-based with Interlock grids
+- **Cutscenes**: CNB files (real-time) and BIK videos (pre-rendered)
 
-#### 3D Model Viewer
-- Real-time 3D rendering with THREE.js
-- WADR camera controls (W=forward, A=left, D=backward, R=right)
-- Mouse rotation and zoom
-- Export to OBJ format
-- Toggle lighting controls
-- Wireframe/solid rendering modes
-
-#### Combat & GameObject Analyzer
-- Analyze game logs and combat data
-- Support for 30+ combat patterns
-- XML/JSON structured data parsing
-- Real-time statistics dashboard
-- Advanced filtering and search
-
-#### Code Editor
-- Monaco Editor integration
-- Syntax highlighting for multiple languages
-- Full editing capabilities
-
-#### Video Player
-- BIK video playback (via FFmpeg proxy)
-- Standard video format support
-- Thumbnail generation
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Python 3.7+
-- FFmpeg (for BIK video conversion)
-- Modern web browser (Chrome/Edge recommended)
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/mxo-moms.git
-cd mxo-moms
-```
-
-2. Install FFmpeg (if not already installed):
-```bash
-# macOS
-brew install ffmpeg
-
-# Windows
-# Download from https://ffmpeg.org/download.html
-
-# Linux
-sudo apt-get install ffmpeg
-```
-
-### Running MOMS
-
-1. Start the servers:
-```bash
-./start_servers.sh
-```
-
-Or manually:
-```bash
-# Main server
-python3 server.py
-
-# BIK video proxy (in another terminal)
-python3 simple-bik-server.py
-```
-
-2. Open your browser and navigate to:
-```
-http://localhost:8000
-```
-
-### Configuration
-
-#### BIK Video Path
-Edit `simple-bik-server.py` line 67 to set your BIK files location:
-```python
-bik_base_path = "/path/to/your/matrix/online/files/"
-```
-
-## 🎮 Usage
-
-### Loading Files
-1. Click "Load Directory" or drag & drop files
-2. Navigate through the file tree on the left
-3. Click files to preview them
-
-### 3D Model Viewer Controls
-- **WADR Keys**: Move camera (Forward/Left/Backward/Right)
-- **Mouse Drag**: Rotate view
+### 3D Viewer Controls
+- **W/A/S/D**: Camera movement (forward/left/backward/right)
+- **Mouse drag**: Rotate view
 - **Scroll**: Zoom in/out
-- **Right-click Drag**: Pan
+- **Right-click drag**: Pan
+- **Toggle Lights**: Turn scene lighting on/off
+- **Export OBJ**: Export current model to Wavefront OBJ format
 
-### Combat Analyzer
-1. Go to the "GameObjects" tab
-2. Load a directory containing log files
-3. Select files to analyze
-4. Use filters to find specific combat events
+## Current Status
 
-### Exporting Models
-1. Load a 3D model file (.moa, .prop, etc.)
-2. Click "Export OBJ" button in the 3D viewer
-3. File will download automatically
+### ✅ Working Features
+- Single-file application fully functional
+- 3D model viewing with enhanced lighting
+- BIK video playback via FFmpeg proxy
+- Combat log analysis with pattern recognition
+- GameObject tab with transform controls
+- OBJ export functionality
 
-## 🏗️ Architecture
+### ⚠️ Known Issues
+- Some .moa files may show vertex stretching (format variations)
+- BIK server path hardcoded (edit line 67 in simple-bik-server.py)
+- THREE.OrbitControls may fail to load (manual controls as fallback)
+- API status calls return 404 (can be ignored)
 
-MOMS is built as a single-page application using:
-- **React 18.2.0** - UI framework
-- **THREE.js 0.153.0** - 3D rendering
+### 🚀 Recent Improvements (June 2025)
+- Migrated to THREE.js r169 with ES modules
+- Fixed model format misconceptions (.moa not .mob)
+- Enhanced combat analyzer with 30+ pattern recognitions
+- Added export functionality for 3D models
+- Improved lighting system with multiple light sources
+
+## BIK Video Configuration
+
+To enable BIK video playback, edit `simple-bik-server.py` line 67:
+```python
+bik_path = "/path/to/your/Matrix Online/resource/Bink/" + filename
+```
+
+## Development Notes
+
+### Frontend Stack
+- **React 18.2.0** - UI framework (loaded from CDN)
+- **THREE.js 0.169.0** - 3D rendering (ES modules in modern version)
 - **Monaco Editor 0.43.0** - Code editing
-- **Tailwind CSS** - Styling
 - **Babel Standalone** - JSX transformation
+- **Tailwind CSS** - Styling (via CDN)
 
-## 🐛 Known Issues
+### Architecture
+- Single HTML file containing all code (~5000 lines)
+- React components defined inline
+- No build process required
+- CORS enabled for development
 
-1. **THREE.js OrbitControls** may fail to load (fallback to manual controls)
-2. **Large files** may cause performance issues due to in-browser Babel
-3. **Some model files** show placeholders due to unknown format variations
-4. **BIK video path** must be manually configured
+## Future Enhancements
 
-## 🤝 Contributing
+### Priority Tasks
+1. Implement proper .moa/.prop binary parsing
+2. Add texture support for 3D models
+3. Create CNB viewer for real-time cutscenes
+4. Implement animation playback system
 
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a pull request
+### Long-term Goals
+1. Split into modular architecture
+2. Add WebSocket support for real-time updates
+3. Implement mod injection system
+4. Create comprehensive file format documentation
 
-## 📚 Documentation
+## Credits
 
-- [Technical Documentation](CLAUDE.md) - Detailed technical information
-- [Original MOMS Docs](moms-master/CLAUDE.md) - Historical documentation
-
-## 🔧 Development
-
-### File Structure
-```
-moms/
-├── index.html              # Main application
-├── server.py               # HTTP server
-├── simple-bik-server.py    # BIK video proxy
-├── start_servers.sh        # Startup script
-├── CLAUDE.md              # Technical documentation
-├── README.md              # This file
-└── moms-master/           # Original source files
-```
-
-### Adding New File Types
-1. Add extension to `FILE_TYPES` object in `index.html`
-2. Create parser function in `LithtechParsers`
-3. Add UI component for preview/editing
-
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Matrix Online community for format research
-- rajkosto for reverse engineering work
-- codejunky for modding tools inspiration
-- All contributors to the MXO preservation effort
-
-## 📞 Support
-
-- Report issues on [GitHub Issues](https://github.com/yourusername/mxo-moms/issues)
-- Join the [MXO Discord](https://discord.gg/matrixonline) community
-
----
-
-**Remember**: The Matrix has you... and now you have the tools to mod it! 🐰🔴💊
+- Original MOMS by the MXO emulation community
+- Combat analyzer patterns from Discord analysis of 32,000+ messages
+- Model format corrections from community research
+- Enhanced by Pascal Disse (2025)

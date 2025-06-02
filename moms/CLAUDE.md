@@ -399,6 +399,55 @@ const controls = new OrbitControls(camera, renderer.domElement);
    - Enhanced lighting system with ambient, directional, point, and fill lights
    - Improved materials with specular properties
 
+## GitHub Repository Update (June 2, 2025 - Session 5)
+
+### Repository Initialization
+Successfully created and pushed MOMS to GitHub repository:
+- **Repository URL**: https://github.com/pascaldisse/moms
+- **Branch**: master
+- **Initial Commit**: Complete MOMS application with all recent enhancements
+
+### Files Included in Repository
+- All application files (index.html, index_modern.html, etc.)
+- Server scripts (server.py, simple-bik-server.py, api-server.py)
+- Documentation (README.md, CLAUDE.md, TECHNICAL.md)
+- Supporting files (mxo-protocol-parser.js, start_servers.sh)
+- Original source in moms-master/
+- Backup files and cache directory
+
+### Documentation Updates
+1. **README.md**: Completely rewritten with:
+   - Comprehensive feature list
+   - Clear setup instructions
+   - Technical specifications
+   - Known issues and solutions
+   - Future enhancement roadmap
+
+2. **CLAUDE.md**: Updated with:
+   - Session 4 enhancements summary
+   - Session 5 GitHub repository creation
+   - Complete file listing
+   - Current status of all features
+
+## Summary of Recent Enhancements (Session 4)
+
+1. **3D Model Format Corrections**
+   - Fixed misconception about .mob files (MXO doesn't use them)
+   - Added support for actual MXO formats: .moa, .prop, .iprf, .eprf, .mga, .mgc
+   - Updated all parsers and UI to reflect correct formats
+
+2. **Enhanced Combat Analyzer**
+   - Expanded file support to include XML, JSON, CSV, DAT, CFG, INI
+   - Added 30+ combat pattern recognitions (damage types, crowd control, buffs/debuffs)
+   - Implemented structured data parsing for XML/JSON files
+   - Added combat value extraction (damage numbers, percentages, dice rolls)
+
+3. **Improved 3D Viewer**
+   - Added "Toggle Lights" button for scene lighting control
+   - Added "Export OBJ" button with comprehensive export function
+   - Enhanced lighting system with ambient, directional, point, and fill lights
+   - Improved materials with specular properties
+
 ## Next Tasks
 
 ### Immediate Priority Tasks
@@ -468,4 +517,4 @@ const controls = new OrbitControls(camera, renderer.domElement);
 4. **Documentation**: Need detailed API documentation for parsers
 
 ---
-*Last Updated: June 2, 2025 - Session 4*
+*Last Updated: June 2, 2025 - Session 5*
