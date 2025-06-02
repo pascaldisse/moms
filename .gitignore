@@ -1,0 +1,17 @@
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# Cache
+cache/
+
+# Temporary files
+*.tmp
+*.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
