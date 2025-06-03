@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PKB Loading Test - Step by Step</title>
+    <style>
+        body { font-family: monospace; background: #000; color: #0f0; padding: 20px; line-height: 1.6; }
+        button { background: #030; color: #0f0; border: 1px solid #0f0; padding: 10px; margin: 5px; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #050; }
+        .step { background: #001100; border: 1px solid #0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .status { background: #222; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+        .warning { color: #ff0; }
+        #log { background: #111; border: 1px solid #0f0; padding: 10px; height: 200px; overflow-y: auto; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🎯 PKB Loading Workflow Test</h1>
+    
+    <div class="step">
+        <h3>📦 Step 1: Load PKB File into Memory</h3>
+        <p>This simulates clicking on the PKB file in the Archives tab:</p>
+        <button onclick="loadPKBFile()">Load worlds_3g.pkb into Memory</button>
+        <div id="pkbStatus" class="status">Not loaded</div>
+    </div>
+    
+    <div class="step">
+        <h3>🎮 Step 2: Extract Models</h3>
+        <p>This simulates clicking "Extract All Models" in 3D Models tab:</p>
+        <button onclick="extractModels()">Extract All Models</button>
+        <div id="extractStatus" class="status">PKB must be loaded first</div>
+    </div>
+    
+    <div class="step">
+        <h3>🔗 Step 3: Open MOMS Application</h3>
+        <p>Follow the same workflow in the actual application:</p>
+        <button onclick="window.open('/', '_blank')">Open MOMS Application</button>
+    </div>
+    
+    <h3>📝 Activity Log</h3>
+    <div id="log"></div>
+    <button onclick="clearLog()">Clear Log</button>
+    
+    <script>
+        function log(msg, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const color = type === 'success' ? '#0f0' : type === 'error' ? '#f00' : type === 'warning' ? '#ff0' : '#ccc';
+            logDiv.innerHTML += `<div style="color: ${color};">${new Date().toLocaleTimeString()}: ${msg}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        async function loadPKBFile() {
+            log('🔍 Attempting to load worlds_3g.pkb...', 'info');
+            const statusDiv = document.getElementById('pkbStatus');
+            
+            try {
+                // Fetch the PKB file (simulating user clicking on it)
+                const response = await fetch('/cache/worlds_3g.pkb');
+                if (response.ok) {
+                    const arrayBuffer = await response.arrayBuffer();
+                    const data = new Uint8Array(arrayBuffer);
+                    
+                    // Store in global memory (like MOMS does)
+                    window.MXO_PKB_FILES = window.MXO_PKB_FILES || {};
+                    window.MXO_PKB_FILES['worlds_3g.pkb'] = data;
+                    
+                    log(`✅ PKB file loaded successfully: ${data.length} bytes`, 'success');
+                    statusDiv.innerHTML = `<span class="success">✅ Loaded: ${data.length} bytes</span>`;
+                    
+                    // Update extract status
+                    document.getElementById('extractStatus').innerHTML = '<span class="success">Ready to extract models!</span>';
+                    
+                    return true;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ Failed to load PKB file: ${error.message}`, 'error');
+                statusDiv.innerHTML = `<span class="error">❌ Failed: ${error.message}</span>`;
+                return false;
+            }
+        }
+        
+        function extractModels() {
+            log('🎮 Attempting to extract models...', 'info');
+            const statusDiv = document.getElementById('extractStatus');
+            
+            // Check if PKB is loaded (like MOMS does)
+            if (!window.MXO_PKB_FILES || !window.MXO_PKB_FILES['worlds_3g.pkb']) {
+                log('❌ PKB file worlds_3g.pkb needs to be loaded first!', 'error');
+                statusDiv.innerHTML = '<span class="error">❌ PKB file needs to be loaded first!</span>';
+                return;
+            }
+            
+            const pkbData = window.MXO_PKB_FILES['worlds_3g.pkb'];
+            log(`✅ PKB data available: ${pkbData.length} bytes`, 'success');
+            
+            // Simulate extraction
+            const models = ['building1.prop', 'terrain.prop', 'vehicle.moa', 'character.moa', 'effects.prop'];
+            log(`🎯 Extracting ${models.length} models: ${models.join(', ')}`, 'success');
+            
+            statusDiv.innerHTML = `<span class="success">✅ Extracted ${models.length} models successfully!</span>`;
+        }
+        
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            log('🌐 PKB workflow test page loaded', 'info');
+            log('💡 Click "Load worlds_3g.pkb into Memory" first, then "Extract All Models"', 'warning');
+        });
+    </script>
+</body>
+</html>

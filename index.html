@@ -6991,6 +6991,20 @@ User Agent: ${navigator.userAgent}`;
                                 // console.log(`Stored PKB index data from ${fileName} (${window.MXO_PKB_INDEX_DATA.length} bytes)`);
                             };
                             reader.readAsArrayBuffer(fileInfo.file);
+                        } else if (fileExt === '.pkb') {
+                            // For PKB files, store them in memory for extraction
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                const buffer = e.target.result;
+                                // Store PKB data globally for extraction
+                                if (!window.MXO_PKB_FILES) {
+                                    window.MXO_PKB_FILES = {};
+                                }
+                                window.MXO_PKB_FILES[fileName.toLowerCase()] = buffer;
+                                console.log(`✅ Loaded PKB file into memory: ${fileName} (${buffer.byteLength} bytes)`);
+                            };
+                            reader.readAsArrayBuffer(fileInfo.file);
+                            parsedData = await LithtechParsers.parseArchive(fileInfo.file);
                         } else {
                             parsedData = await LithtechParsers.parseArchive(fileInfo.file);
                         }
