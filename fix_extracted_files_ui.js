@@ -117,21 +117,53 @@ window.viewExtractedFile = (pkbName, fileIndex) => {
         // For 3D models, trigger the model viewer
         console.log('🎮 Opening in 3D viewer...');
         
-        // Find the file select handler
+        // Store the file globally for the viewer to access
+        window.CURRENT_EXTRACTED_FILE = file;
+        
+        // Try multiple methods to open the file
         if (window.handleFileSelect) {
+            // Method 1: Use handleFileSelect if available
             window.handleFileSelect(file.name, { type: 'file', file: file.file });
+        } else {
+            // Method 2: Direct approach - simulate file selection
+            console.log('📂 Using direct file opening method...');
             
-            // Switch to explorer view by clicking the tab
+            // Store file in a way the app can access
+            if (!window.EXTRACTED_FILES_FOR_VIEWING) {
+                window.EXTRACTED_FILES_FOR_VIEWING = {};
+            }
+            window.EXTRACTED_FILES_FOR_VIEWING[file.name] = {
+                type: 'file',
+                file: file.file
+            };
+            
+            // Dispatch a custom event that the app can listen to
+            const event = new CustomEvent('openExtractedFile', {
+                detail: { 
+                    path: file.name,
+                    fileInfo: { type: 'file', file: file.file }
+                }
+            });
+            window.dispatchEvent(event);
+        }
+        
+        // Switch to explorer view by clicking the tab
+        setTimeout(() => {
             const tabs = document.querySelectorAll("div[class*='cursor-pointer'][class*='rounded-t']");
             for (const tab of tabs) {
                 if (tab.textContent.trim() === 'File Explorer') {
                     tab.click();
+                    // After switching to explorer, try to load the file again
+                    setTimeout(() => {
+                        if (window.handleFileSelect && window.CURRENT_EXTRACTED_FILE) {
+                            const f = window.CURRENT_EXTRACTED_FILE;
+                            window.handleFileSelect(f.name, { type: 'file', file: f.file });
+                        }
+                    }, 500);
                     break;
                 }
             }
-        } else {
-            console.error('File select handler not found');
-        }
+        }, 100);
     } else {
         // For other files, show hex dump or text
         const data = file.data;

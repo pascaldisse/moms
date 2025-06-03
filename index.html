@@ -7031,6 +7031,24 @@ User Agent: ${navigator.userAgent}`;
                 window.setModelFilter = setModelFilter;
             }, [modelFilter]);
             
+            // Listen for custom event to open extracted files
+            useEffect(() => {
+                const handleOpenExtractedFile = (event) => {
+                    const { path, fileInfo } = event.detail;
+                    console.log('📂 Opening extracted file:', path);
+                    if (handleFileSelect) {
+                        handleFileSelect(path, fileInfo);
+                        setActiveView('explorer');
+                    }
+                };
+                
+                window.addEventListener('openExtractedFile', handleOpenExtractedFile);
+                
+                return () => {
+                    window.removeEventListener('openExtractedFile', handleOpenExtractedFile);
+                };
+            }, []);
+            
             // Handle directory selection
             const handleDirectorySelect = (e) => {
                 const dirInput = e.target;
@@ -7097,8 +7115,6 @@ User Agent: ${navigator.userAgent}`;
             
             // Handle file selection from tree
             const handleFileSelect = async (path, fileInfo) => {
-                // Make globally accessible for extracted files UI
-                window.handleFileSelect = handleFileSelect;
                 if (fileInfo.type !== 'file' || !fileInfo.file) return;
                 
                 setSelectedFilePath(path);
@@ -7315,6 +7331,9 @@ User Agent: ${navigator.userAgent}`;
                     setIsLoading(false);
                 }
             };
+            
+            // Make handleFileSelect globally accessible for extracted files UI
+            window.handleFileSelect = handleFileSelect;
             
             // Handle extracted files
             const handleExtractedFiles = (extractedFiles) => {
