@@ -680,6 +680,11 @@
             
             // PROP Parser - Static props (successfully exported by community)
             parsePROP: async (file) => {
+                // Use enhanced parser if available
+                if (window.enhancedPROPParser) {
+                    return window.enhancedPROPParser(file);
+                }
+                
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
                     reader.onload = (e) => {
@@ -3913,6 +3918,7 @@
                         {data?.metadata?.needsConversion && data?.metadata?.instructions ? (
                             <div dangerouslySetInnerHTML={{ __html: data.metadata.instructions.outerHTML }} />
                         ) : (
+                        <>
                         <div 
                             style={{ 
                                 width: '100%', 
@@ -4023,6 +4029,7 @@
                                 </button>
                             </div>
                         </div>
+                        </>
                         )}
                         
                         {videoMetadata && (
@@ -8338,5 +8345,7 @@ User Agent: ${navigator.userAgent}`;
     <script src="/fix_extracted_files_ui.js"></script>
     <!-- Load cutscenes and gameobjects fixes -->
     <script src="/fix_cutscenes_and_gameobjects.js"></script>
+    <!-- Enhanced PROP parser -->
+    <script src="/fix_prop_parser.js"></script>
 </body>
 </html>

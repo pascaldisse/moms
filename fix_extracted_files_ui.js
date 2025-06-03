@@ -120,6 +120,13 @@ window.viewExtractedFile = (pkbName, fileIndex) => {
         // Store the file globally for the viewer to access
         window.CURRENT_EXTRACTED_FILE = file;
         
+        // Close the modal FIRST
+        const modal = document.getElementById('extracted-files-modal');
+        if (modal) {
+            modal.remove();
+            console.log('✅ Modal closed');
+        }
+        
         // Try multiple methods to open the file
         if (window.handleFileSelect) {
             // Method 1: Use handleFileSelect if available

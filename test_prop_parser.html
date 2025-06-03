@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Enhanced PROP Parser</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r153/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+        }
+        #canvas {
+            width: 800px;
+            height: 600px;
+            border: 1px solid #0f0;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            background: #0f0;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0a0;
+        }
+        #log {
+            white-space: pre-wrap;
+            padding: 10px;
+            background: #111;
+            border: 1px solid #0f0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Enhanced PROP Parser Test</h1>
+    
+    <div>
+        <button onclick="testParser('building1.prop')">Test building1.prop</button>
+        <button onclick="testParser('terrain.prop')">Test terrain.prop</button>
+        <button onclick="testParser('effects.prop')">Test effects.prop</button>
+        <button onclick="createAndTestProp()">Create & Test New PROP</button>
+    </div>
+    
+    <div id="canvas"></div>
+    <div id="log"></div>
+    
+    <script src="/fix_prop_parser.js"></script>
+    <script>
+        let scene, camera, renderer;
+        const log = document.getElementById('log');
+        
+        function addLog(msg) {
+            log.textContent += msg + '\n';
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        // Initialize THREE.js
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, 800 / 600, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(800, 600);
+            document.getElementById('canvas').appendChild(renderer.domElement);
+            
+            // Add lights
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+            
+            camera.position.z = 5;
+            
+            animate();
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        
+        async function testParser(filename) {
+            addLog(`\n=== Testing ${filename} ===`);
+            
+            try {
+                const response = await fetch(`/cache/${filename}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch: ${response.status}`);
+                }
+                
+                const blob = await response.blob();
+                const file = new File([blob], filename, { type: 'application/octet-stream' });
+                
+                addLog(`File loaded: ${file.size} bytes`);
+                
+                // Test the parser
+                const parsedData = await window.enhancedPROPParser(file);
+                
+                addLog(`Parser results:`);
+                addLog(`- Vertices: ${parsedData.metadata.vertexCount}`);
+                addLog(`- Faces: ${parsedData.metadata.faceCount}`);
+                addLog(`- Has UVs: ${parsedData.metadata.hasUVs}`);
+                addLog(`- Has Normals: ${parsedData.metadata.hasNormals}`);
+                addLog(`- Signature: ${parsedData.metadata.signature}`);
+                
+                // Render the model
+                if (window.renderPROPModel) {
+                    window.renderPROPModel(parsedData, scene, camera, renderer);
+                    addLog('Model rendered successfully!');
+                } else {
+                    // Fallback renderer
+                    renderBasic(parsedData);
+                }
+                
+            } catch (error) {
+                addLog(`ERROR: ${error.message}`);
+                console.error(error);
+            }
+        }
+        
+        function renderBasic(data) {
+            // Clear scene
+            while(scene.children.length > 2) {
+                scene.remove(scene.children[2]);
+            }
+            
+            if (data.vertices.length === 0) {
+                addLog('No vertices to render');
+                return;
+            }
+            
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices, 3));
+            
+            if (data.indices.length > 0) {
+                geometry.setIndex(data.indices);
+            }
+            
+            if (data.normals.length > 0) {
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(data.normals, 3));
+            } else {
+                geometry.computeVertexNormals();
+            }
+            
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x00ff00,
+                side: THREE.DoubleSide
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+            
+            // Center camera
+            geometry.computeBoundingBox();
+            const center = new THREE.Vector3();
+            geometry.boundingBox.getCenter(center);
+            const size = new THREE.Vector3();
+            geometry.boundingBox.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z);
+            
+            camera.position.set(maxDim * 2, maxDim * 2, maxDim * 2);
+            camera.lookAt(center);
+            
+            addLog('Basic rendering complete');
+        }
+        
+        async function createAndTestProp() {
+            addLog('\n=== Creating test PROP file ===');
+            
+            // Create a simple box PROP file
+            const vertexCount = 8;
+            const faceCount = 12;
+            
+            const buffer = new ArrayBuffer(0x88 + vertexCount * 12 + faceCount * 12 + 256);
+            const view = new DataView(buffer);
+            const uint8 = new Uint8Array(buffer);
+            
+            // Write PROP signature
+            uint8[0] = 0x50; // P
+            uint8[1] = 0x52; // R
+            uint8[2] = 0x4F; // O
+            uint8[3] = 0x50; // P
+            
+            // Write counts at offset 0x80
+            view.setUint32(0x80, vertexCount, true);
+            view.setUint32(0x84, faceCount, true);
+            
+            // Write box vertices (in centimeters)
+            let offset = 0x88;
+            const boxVerts = [
+                [-50, -50, -50], [50, -50, -50], [50, 50, -50], [-50, 50, -50],
+                [-50, -50, 50], [50, -50, 50], [50, 50, 50], [-50, 50, 50]
+            ];
+            
+            for (const vert of boxVerts) {
+                view.setFloat32(offset, vert[0], true);
+                view.setFloat32(offset + 4, vert[1], true);
+                view.setFloat32(offset + 8, vert[2], true);
+                offset += 12;
+            }
+            
+            // Write box faces
+            const boxFaces = [
+                [0,1,2], [0,2,3], // Front
+                [5,4,7], [5,7,6], // Back
+                [4,0,3], [4,3,7], // Left
+                [1,5,6], [1,6,2], // Right
+                [3,2,6], [3,6,7], // Top
+                [4,5,1], [4,1,0]  // Bottom
+            ];
+            
+            for (const face of boxFaces) {
+                view.setUint32(offset, face[0], true);
+                view.setUint32(offset + 4, face[1], true);
+                view.setUint32(offset + 8, face[2], true);
+                offset += 12;
+            }
+            
+            const file = new File([buffer], 'test_box.prop', { type: 'application/octet-stream' });
+            addLog(`Created test file: ${file.size} bytes`);
+            
+            // Parse and render
+            const parsedData = await window.enhancedPROPParser(file);
+            renderBasic(parsedData);
+        }
+        
+        // Initialize on load
+        init();
+        addLog('Enhanced PROP Parser Test Ready');
+        addLog('Click a button to test parsing and rendering');
+    </script>
+</body>
+</html>
