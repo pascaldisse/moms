@@ -1192,31 +1192,49 @@
                         
                         // Check if this is a BIK file that needs conversion
                         if (file.name.toLowerCase().endsWith('.bik')) {
-                            // Use the BIK proxy server to get a streamable URL
-                            try {
-                                const response = await fetch('http://localhost:8002/proxy-url', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({
-                                        path: file.webkitRelativePath || file.path || file.name
-                                    })
-                                });
-                                
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    videoUrl = data.url;
-                                    // console.log('BIK proxy URL:', videoUrl);
-                                } else {
-                                    console.error('BIK proxy server error:', response.status);
-                                    // Fallback to blob URL (won't play but won't crash)
+                            // Use enhanced BIK player if available
+                            if (window.enhancedBikPlayer) {
+                                const result = await window.enhancedBikPlayer(file);
+                                if (typeof result === 'string') {
+                                    videoUrl = result;
+                                } else if (result.error) {
+                                    // Show instructions instead of video
+                                    return resolve({
+                                        type: 'cutscene',
+                                        url: URL.createObjectURL(file),
+                                        metadata: {
+                                            format: 'BIK',
+                                            filename: file.name,
+                                            fileSize: file.size,
+                                            needsConversion: true,
+                                            instructions: result.instructions
+                                        }
+                                    });
+                                }
+                            } else {
+                                // Fallback to original BIK proxy attempt
+                                try {
+                                    const response = await fetch('http://localhost:8002/proxy-url', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            path: file.webkitRelativePath || file.path || file.name
+                                        })
+                                    });
+                                    
+                                    if (response.ok) {
+                                        const data = await response.json();
+                                        videoUrl = data.url;
+                                    } else {
+                                        console.error('BIK proxy server error:', response.status);
+                                        videoUrl = URL.createObjectURL(file);
+                                    }
+                                } catch (error) {
+                                    console.error('Failed to get BIK proxy URL:', error);
                                     videoUrl = URL.createObjectURL(file);
                                 }
-                            } catch (error) {
-                                console.error('Failed to get BIK proxy URL:', error);
-                                // Fallback to blob URL
-                                videoUrl = URL.createObjectURL(file);
                             }
                         } else {
                             // For other video formats, create a regular blob URL
@@ -2599,6 +2617,13 @@
                     
                     // Create mesh
                     const mesh = new window.THREE.Mesh(geometry, material);
+                    modelRef.current = mesh;
+                    
+                    // Connect GameObject properties if available
+                    if (window.connectGameObjectToModel) {
+                        window.gameObjectProperties = window.connectGameObjectToModel(mesh);
+                        console.log('GameObject properties connected to model');
+                    }
                     
                     // Check if we have LOD levels
                     if (data.lodLevels && data.lodLevels.length > 1) {
@@ -3412,15 +3437,42 @@
                                     <div className="grid grid-cols-3 gap-2 mb-2">
                                         <div>
                                             <label className="text-xs block mb-1">Position X</label>
-                                            <input type="number" defaultValue="0" className="w-full bg-gray-900 border border-green-700 px-2 py-1 text-xs" />
+                                            <input 
+                                                type="number" 
+                                                defaultValue={modelRef.current?.position.x || 0}
+                                                onChange={(e) => {
+                                                    if (window.gameObjectProperties?.transform?.position) {
+                                                        window.gameObjectProperties.transform.position.x = e.target.value;
+                                                    }
+                                                }}
+                                                className="w-full bg-gray-900 border border-green-700 px-2 py-1 text-xs" 
+                                            />
                                         </div>
                                         <div>
                                             <label className="text-xs block mb-1">Position Y</label>
-                                            <input type="number" defaultValue="0" className="w-full bg-gray-900 border border-green-700 px-2 py-1 text-xs" />
+                                            <input 
+                                                type="number" 
+                                                defaultValue={modelRef.current?.position.y || 0}
+                                                onChange={(e) => {
+                                                    if (window.gameObjectProperties?.transform?.position) {
+                                                        window.gameObjectProperties.transform.position.y = e.target.value;
+                                                    }
+                                                }}
+                                                className="w-full bg-gray-900 border border-green-700 px-2 py-1 text-xs" 
+                                            />
                                         </div>
                                         <div>
                                             <label className="text-xs block mb-1">Position Z</label>
-                                            <input type="number" defaultValue="0" className="w-full bg-gray-900 border border-green-700 px-2 py-1 text-xs" />
+                                            <input 
+                                                type="number" 
+                                                defaultValue={modelRef.current?.position.z || 0}
+                                                onChange={(e) => {
+                                                    if (window.gameObjectProperties?.transform?.position) {
+                                                        window.gameObjectProperties.transform.position.z = e.target.value;
+                                                    }
+                                                }}
+                                                className="w-full bg-gray-900 border border-green-700 px-2 py-1 text-xs" 
+                                            />
                                         </div>
                                     </div>
                                     
@@ -3530,8 +3582,30 @@
                             </div>
                             
                             <div className="flex gap-2">
-                                <button className="matrix-button text-xs">Apply Changes</button>
-                                <button className="matrix-button text-xs">Reset</button>
+                                <button 
+                                    className="matrix-button text-xs"
+                                    onClick={() => {
+                                        console.log('GameObject changes applied');
+                                        if (rendererRef.current) {
+                                            rendererRef.current.render(scene, camera);
+                                        }
+                                    }}
+                                >
+                                    Apply Changes
+                                </button>
+                                <button 
+                                    className="matrix-button text-xs"
+                                    onClick={() => {
+                                        if (window.gameObjectProperties?.reset) {
+                                            window.gameObjectProperties.reset();
+                                            // Refresh the inputs by triggering re-render
+                                            setActiveTab('view');
+                                            setTimeout(() => setActiveTab('gameobject'), 10);
+                                        }
+                                    }}
+                                >
+                                    Reset
+                                </button>
                             </div>
                         </div>
                     )}
@@ -3836,6 +3910,9 @@
                     </div>
                     
                     <div className="p-4 flex flex-col items-center justify-center" style={{ height: 'calc(100% - 40px)', overflow: 'auto' }}>
+                        {data?.metadata?.needsConversion && data?.metadata?.instructions ? (
+                            <div dangerouslySetInnerHTML={{ __html: data.metadata.instructions.outerHTML }} />
+                        ) : (
                         <div 
                             style={{ 
                                 width: '100%', 
@@ -3946,6 +4023,7 @@
                                 </button>
                             </div>
                         </div>
+                        )}
                         
                         {videoMetadata && (
                             <div className="w-full max-w-[800px] mt-8 p-4" style={{ backgroundColor: 'rgba(0, 255, 0, 0.1)', borderRadius: '5px' }}>
@@ -4431,6 +4509,7 @@
                                 </button>
                             </div>
                         </div>
+                        )}
                         
                         {videoMetadata && (
                             <div className="w-full max-w-[800px] mt-8 p-4" style={{ backgroundColor: 'rgba(0, 255, 0, 0.1)', borderRadius: '5px' }}>
@@ -8257,5 +8336,7 @@ User Agent: ${navigator.userAgent}`;
     <script src="/fix_3d_models_init.js"></script>
     <!-- Load extracted files UI -->
     <script src="/fix_extracted_files_ui.js"></script>
+    <!-- Load cutscenes and gameobjects fixes -->
+    <script src="/fix_cutscenes_and_gameobjects.js"></script>
 </body>
 </html>

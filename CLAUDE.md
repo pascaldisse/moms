@@ -826,6 +826,71 @@ The application is now in **Production Ready** status (v2.1.0) with comprehensiv
 
 **Status**: PKB loading workflow issue **RESOLVED** ✅
 
+## Major UI Improvements (January 6, 2025 - Session 8)
+
+### Features Fixed and Enhanced
+
+1. **BIK Video Playback** ✅
+   - Added automatic server detection
+   - Shows user-friendly instructions when server not available
+   - Provides setup commands for FFmpeg and simple-bik-server.py
+   - Graceful fallback with detailed help
+
+2. **GameObject Properties** ✅
+   - Connected UI controls to actual 3D model transforms
+   - Position, Rotation, Scale inputs now modify model in real-time
+   - Added working Reset button to restore original values
+   - Apply button re-renders the scene
+
+3. **Enhanced Combat Analyzer** ✅
+   - Added 8 category system: gameObjects, combat, animations, network, abilities, items, npcs, quests
+   - Pattern recognition for 30+ combat types
+   - Extracts values (damage numbers, coordinates, IDs)
+   - Better timestamp and value extraction
+
+4. **Model Export** ✅
+   - Added exportModel() function
+   - Exports to Wavefront OBJ format
+   - Includes vertices, normals, UVs, and faces
+   - Automatic file download
+
+5. **Extracted Files Viewing** ✅
+   - Fixed viewing extracted PKB files
+   - Multiple fallback methods for opening files
+   - Custom event system for file loading
+   - Automatic tab switching to File Explorer
+
+### Files Created/Modified
+
+- `fix_cutscenes_and_gameobjects.js` - Enhanced functionality for video and GameObject features
+- Updated `index.html` - Integrated all fixes and improvements
+- Updated `README.md` - Comprehensive documentation of all features
+- Updated `CLAUDE.md` - Complete session history
+
+### Current Feature Status
+
+**Working Features** ✅:
+- PKB extraction with UI
+- 3D model viewing with transforms
+- BIK video instructions
+- GameObject property editing
+- Combat log analysis
+- Code editing (Monaco)
+- Texture viewing (basic formats)
+- Audio playback
+- Archive browsing
+
+**Partially Working** ⚠️:
+- Model parsing (some formats show placeholders)
+- DTX textures (need conversion)
+- Some archive formats
+
+**Not Implemented** ❌:
+- Animation playback
+- Level/world rendering
+- Advanced texture formats
+- Model import
+
 ---
-*Last Updated: January 6, 2025 - Session 7*
+*Last Updated: January 6, 2025 - Session 8*
 >>>>>>> e1b1fb2 (init)
