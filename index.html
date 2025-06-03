@@ -7202,17 +7202,21 @@ User Agent: ${navigator.userAgent}`;
                             reader.readAsArrayBuffer(fileInfo.file);
                         } else if (fileExt === '.pkb') {
                             // For PKB files, store them in memory for extraction
-                            const reader = new FileReader();
-                            reader.onload = (e) => {
-                                const buffer = e.target.result;
-                                // Store PKB data globally for extraction
-                                if (!window.MXO_PKB_FILES) {
-                                    window.MXO_PKB_FILES = {};
-                                }
-                                window.MXO_PKB_FILES[fileName.toLowerCase()] = buffer;
-                                console.log(`✅ Loaded PKB file into memory: ${fileName} (${buffer.byteLength} bytes)`);
-                            };
-                            reader.readAsArrayBuffer(fileInfo.file);
+                            // Need to load PKB data BEFORE parsing archive
+                            await new Promise((resolve) => {
+                                const reader = new FileReader();
+                                reader.onload = (e) => {
+                                    const buffer = e.target.result;
+                                    // Store PKB data globally for extraction
+                                    if (!window.MXO_PKB_FILES) {
+                                        window.MXO_PKB_FILES = {};
+                                    }
+                                    window.MXO_PKB_FILES[fileName.toLowerCase()] = buffer;
+                                    console.log(`✅ Loaded PKB file into memory: ${fileName} (${buffer.byteLength} bytes)`);
+                                    resolve();
+                                };
+                                reader.readAsArrayBuffer(fileInfo.file);
+                            });
                             parsedData = await LithtechParsers.parseArchive(fileInfo.file);
                         } else {
                             parsedData = await LithtechParsers.parseArchive(fileInfo.file);
@@ -7448,7 +7452,13 @@ User Agent: ${navigator.userAgent}`;
                             </div>
                             <div 
                                 className={`px-4 py-2 cursor-pointer mr-2 border border-green-500 border-b-0 rounded-t ${activeView === 'models' ? 'bg-green-900 text-green-100' : 'text-green-500 bg-gray-800'}`}
-                                onClick={() => setActiveView('models')}
+                                onClick={async () => {
+                                    setActiveView('models');
+                                    // Auto-initialize 3D Models tab
+                                    if (window.init3DModelsTab) {
+                                        await window.init3DModelsTab();
+                                    }
+                                }}
                             >
                                 3D Models
                             </div>
@@ -8196,5 +8206,8 @@ User Agent: ${navigator.userAgent}`;
             initApp();
         }
     </script>
+    
+    <!-- Load 3D Models initialization -->
+    <script src="/fix_3d_models_init.js"></script>
 </body>
 </html>

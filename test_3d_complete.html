@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D Models Complete Test</title>
+    <style>
+        body { font-family: monospace; background: #000; color: #0f0; padding: 20px; }
+        button { background: #030; color: #0f0; border: 1px solid #0f0; padding: 10px; margin: 5px; cursor: pointer; }
+        .status { background: #111; border: 1px solid #0f0; padding: 10px; margin: 10px 0; }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+    </style>
+</head>
+<body>
+    <h1>🎯 3D Models Tab Complete Test</h1>
+    
+    <button onclick="loadInitScript()">1. Load Init Script</button>
+    <button onclick="runInit()">2. Run Initialization</button>
+    <button onclick="testExtraction()">3. Test Extraction</button>
+    
+    <div id="status" class="status">Ready to test...</div>
+    
+    <script>
+        function updateStatus(msg, isError = false) {
+            const status = document.getElementById('status');
+            status.innerHTML += `<div class="${isError ? 'error' : 'success'}">${new Date().toLocaleTimeString()}: ${msg}</div>`;
+            console.log(msg);
+        }
+        
+        async function loadInitScript() {
+            updateStatus('Loading initialization script...');
+            try {
+                const script = document.createElement('script');
+                script.src = '/fix_3d_models_init.js';
+                document.head.appendChild(script);
+                await new Promise(resolve => {
+                    script.onload = () => {
+                        updateStatus('✅ Init script loaded');
+                        resolve();
+                    };
+                    script.onerror = () => {
+                        updateStatus('❌ Failed to load init script', true);
+                        resolve();
+                    };
+                });
+            } catch (error) {
+                updateStatus(`❌ Error: ${error.message}`, true);
+            }
+        }
+        
+        async function runInit() {
+            if (!window.init3DModelsTab) {
+                updateStatus('❌ Init function not found - load script first!', true);
+                return;
+            }
+            
+            updateStatus('Running 3D Models initialization...');
+            const result = await window.init3DModelsTab();
+            updateStatus(`✅ Initialization complete!`);
+            updateStatus(`Index loaded: ${result.indexLoaded}`);
+            updateStatus(`PKB files: ${result.pkbFiles.join(', ')}`);
+            updateStatus(`Enhanced extraction: ${result.enhancedExtraction}`);
+        }
+        
+        async function testExtraction() {
+            if (!window.extractFromPKB) {
+                updateStatus('❌ Extraction function not found', true);
+                return;
+            }
+            
+            updateStatus('Testing extraction...');
+            const pkbFiles = Object.keys(window.MXO_PKB_FILES || {});
+            
+            if (pkbFiles.length === 0) {
+                updateStatus('❌ No PKB files loaded - run init first!', true);
+                return;
+            }
+            
+            for (const pkb of pkbFiles) {
+                const results = await window.extractFromPKB(pkb);
+                updateStatus(`${pkb}: Extracted ${results.length} files`);
+                results.forEach(f => updateStatus(`  - ${f.name} (${f.size} bytes)`));
+            }
+        }
+        
+        // Auto-run on load
+        window.addEventListener('load', async () => {
+            updateStatus('🌐 Test page loaded');
+            await loadInitScript();
+            
+            // Also load enhanced extraction
+            const script2 = document.createElement('script');
+            script2.src = '/fix_pkb_extraction.js';
+            document.head.appendChild(script2);
+        });
+    </script>
+</body>
+</html>
