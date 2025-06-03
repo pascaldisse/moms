@@ -7097,6 +7097,8 @@ User Agent: ${navigator.userAgent}`;
             
             // Handle file selection from tree
             const handleFileSelect = async (path, fileInfo) => {
+                // Make globally accessible for extracted files UI
+                window.handleFileSelect = handleFileSelect;
                 if (fileInfo.type !== 'file' || !fileInfo.file) return;
                 
                 setSelectedFilePath(path);
@@ -7655,6 +7657,30 @@ User Agent: ${navigator.userAgent}`;
                                         Extract All Models
                                     </button>
                                     <button 
+                                        className="bg-green-900 text-green-100 px-4 py-2 rounded ml-2"
+                                        onClick={async () => {
+                                            if (window.extractAllModelsWithUI) {
+                                                await window.extractAllModelsWithUI();
+                                            } else {
+                                                alert('Enhanced UI not loaded. Refresh page and try again.');
+                                            }
+                                        }}
+                                    >
+                                        Extract & View
+                                    </button>
+                                    <button 
+                                        className="bg-purple-900 text-purple-100 px-4 py-2 rounded ml-2"
+                                        onClick={() => {
+                                            if (window.showExtractedFilesUI) {
+                                                window.showExtractedFilesUI();
+                                            } else {
+                                                alert('No files extracted yet.');
+                                            }
+                                        }}
+                                    >
+                                        Show Extracted
+                                    </button>
+                                    <button 
                                         className="bg-blue-900 text-blue-100 px-4 py-2 rounded ml-2"
                                         onClick={() => {
                                             console.log('🔍 === PKB DEBUG INFO ===');
@@ -7662,6 +7688,7 @@ User Agent: ${navigator.userAgent}`;
                                             console.log('Index size:', window.MXO_PKB_INDEX_DATA?.length || 0);
                                             console.log('PKB files loaded:', Object.keys(window.MXO_PKB_FILES || {}));
                                             console.log('PKB sizes:', Object.entries(window.MXO_PKB_FILES || {}).map(([k,v]) => `${k}: ${v.byteLength} bytes`));
+                                            console.log('Extracted files:', window.MXO_EXTRACTED_FILES);
                                             console.log('======================');
                                         }}
                                     >
@@ -8209,5 +8236,7 @@ User Agent: ${navigator.userAgent}`;
     
     <!-- Load 3D Models initialization -->
     <script src="/fix_3d_models_init.js"></script>
+    <!-- Load extracted files UI -->
+    <script src="/fix_extracted_files_ui.js"></script>
 </body>
 </html>
