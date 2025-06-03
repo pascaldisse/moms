@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head><title>PKB Test</title></head>
+<body>
+<h1>PKB Extraction Test</h1>
+<div id="result">Testing...</div>
+<script>
+
+async function testPKBExtraction() {
+    console.log('🧪 Starting PKB Extraction Test...');
+    
+    // Step 1: Load index file
+    console.log('📋 Loading index file...');
+    const indexResponse = await fetch('/cache/packmap_save.lta');
+    const indexBuffer = await indexResponse.arrayBuffer();
+    window.MXO_PKB_INDEX_DATA = new Uint8Array(indexBuffer);
+    console.log('✅ Index loaded:', window.MXO_PKB_INDEX_DATA.length, 'bytes');
+    
+    // Step 2: Load PKB file
+    console.log('📦 Loading worlds_3g.pkb...');
+    const pkbResponse = await fetch('/cache/worlds_3g.pkb');
+    const pkbBuffer = await pkbResponse.arrayBuffer();
+    window.MXO_PKB_FILES = { 'worlds_3g.pkb': pkbBuffer };
+    console.log('✅ PKB loaded:', pkbBuffer.byteLength, 'bytes');
+    
+    // Step 3: Load enhanced extraction if not already loaded
+    if (!window.extractFromPKBEnhanced) {
+        console.log('📥 Loading enhanced extraction...');
+        const script = document.createElement('script');
+        script.src = '/fix_pkb_extraction.js';
+        document.head.appendChild(script);
+        await new Promise(resolve => {
+            script.onload = resolve;
+            script.onerror = () => {
+                console.warn('⚠️ Could not load enhanced extraction');
+                resolve();
+            };
+        });
+    }
+    
+    // Step 4: Test extraction
+    console.log('🎯 Testing extraction...');
+    const results = await window.extractFromPKB('worlds_3g.pkb');
+    
+    console.log('\n📊 EXTRACTION RESULTS:');
+    console.log('Files extracted:', results.length);
+    
+    if (results.length > 0) {
+        console.log('✅ EXTRACTION SUCCESS!');
+        results.forEach((file, i) => {
+            console.log(`  ${i+1}. ${file.name} (${file.size} bytes) @ offset ${file.offset}`);
+            // Check file data
+            if (file.data && file.data.length > 0) {
+                const header = Array.from(file.data.slice(0, 4)).map(b => String.fromCharCode(b)).join('');
+                console.log(`     Header: "${header}"`);
+            }
+        });
+        return { success: true, count: results.length, files: results.map(f => f.name) };
+    } else {
+        console.log('❌ EXTRACTION FAILED - No files extracted');
+        return { success: false, count: 0, files: [] };
+    }
+}
+
+// Run the test
+testPKBExtraction().then(result => {
+    window.PKB_TEST_RESULT = result;
+    console.log('\n🏁 Test complete:', result);
+});
+
+
+// Update UI with results
+setTimeout(() => {
+    const result = window.PKB_TEST_RESULT;
+    if (result) {
+        document.getElementById('result').innerHTML = 
+            result.success ? 
+            `✅ SUCCESS: Extracted ${result.count} files<br>${result.files.join('<br>')}` :
+            `❌ FAILED: No files extracted`;
+    }
+}, 3000);
+</script>
+</body>
+</html>
